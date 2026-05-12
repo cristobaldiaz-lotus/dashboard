@@ -162,7 +162,7 @@
         </div>
     </div>
 
-   <script>
+  <script>
         const CORRECT_PASSWORD = 'flordeloto2026';
         const SHEET_ID = '1FfZenRVepS2mG-jvpG-WOyWSvlYtwLaUjD_tHW94r00';
         
@@ -196,7 +196,6 @@
             }
         });
 
-        // --- SINCRONIZACIÓN ---
         function setSyncStatus(status) {
             const dot = document.getElementById('syncDot');
             const text = document.getElementById('syncText');
@@ -207,7 +206,7 @@
         async function loadFromGoogleSheet() {
             setSyncStatus('loading');
             try {
-                // Datos principales (Pestaña 1 - GID 0)
+                // 1. Carga Datos Principales
                 const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=0&t=${new Date().getTime()}`;
                 const response = await fetch(url);
                 const csv = await response.text();
@@ -220,22 +219,22 @@
                     const values = lines[i].split(separator).map(v => v.trim().replace(/"/g, ''));
                     const row = {};
                     headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
-                    
                     const pField = row['Productora'] || 'TBA';
                     pField.split('+').forEach(p => {
                         rawData.push({ ...row, _productoraUnica: p.trim() });
                     });
                 }
 
-                // Noticias (Pestaña 2 - GID 1114214532) - CORREGIDO
+                // 2. Carga Noticias - CORREGIDO (Salto de cabecera y selección de columnas)
                 const newsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=1114214532&t=${new Date().getTime()}`;
                 const nRes = await fetch(newsUrl);
                 if (nRes.ok) {
                     const nCsv = await nRes.text();
                     const nLines = nCsv.split(/\r?\n/);
                     if (nLines.length > 1) {
-                        // Buscamos la fila que NO sea el encabezado
+                        // Usamos la segunda línea (datos)
                         const nVals = nLines[1].split(separator).map(v => v.trim().replace(/"/g, ''));
+                        // En la pestaña noticias: B es índice 1, C es índice 2
                         document.getElementById('newsTextB3').innerText = nVals[1] || "Sin noticias";
                         document.getElementById('newsTextC3').innerText = nVals[2] || "Sin lanzamientos";
                     }
@@ -255,7 +254,6 @@
             syncTimer = setInterval(loadFromGoogleSheet, 30000);
         }
 
-        // --- DASHBOARD LOGIC ---
         function fDate(val) {
             if (!val || isNaN(val)) return val || '-';
             let d = new Date(Math.round((val - 25569) * 86400 * 1000));
@@ -285,24 +283,21 @@
                 let rawD = r['Fecha Anuncio'];
                 let d = (rawD && !isNaN(rawD)) ? new Date(Math.round((rawD - 25569) * 86400 * 1000)) : null;
                 if(d) d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
-                
                 const matchP = pF === 'All' || r._productoraUnica === pF;
                 const matchR = rF === 'All' || r['Recinto'] === rF;
                 const matchM = mF === 'All' || (d && d.getMonth().toString() === mF);
                 const matchA = aF === 'All' || (d && d.getFullYear().toString() === aF);
                 const matchS = (r['Evento/Artista'] || "").toLowerCase().includes(sF);
-                
                 return matchP && matchR && matchM && matchA && matchS;
             });
-
-            updateUI(filtered, aF);
+            updateUI(filtered);
         }
 
-        function updateUI(data, selectedAnio) {
+        function updateUI(data) {
             document.getElementById('kpiTotal').innerText = data.length;
             document.getElementById('kpiSoldOut').innerText = data.filter(r => (r['Status Venta'] || "").toLowerCase().includes('sold out')).length;
 
-            // Tabla Maestra
+            // TABLA INFERIOR - CORREGIDO TÍTULO Y LINK
             document.getElementById('tableBody').innerHTML = data.map(r => `
                 <tr class="border-b border-zinc-900/50 hover:bg-zinc-900/50">
                     <td class="p-4 font-bold text-white text-xs">${r['Evento/Artista'] || '-'}</td>
@@ -312,14 +307,17 @@
                     <td class="p-4 text-zinc-200">${r['Productora'] || '-'}</td>
                     <td class="p-4 text-[10px] text-zinc-500 uppercase">PV: ${fDate(r['Fecha Preventa'])}<br>VG: ${fDate(r['Fecha Venta General'])}</td>
                     <td class="p-4 italic text-[10px] text-zinc-400 font-bold">${r['Status Venta'] || 'DISPONIBLE'}</td>
-                    <td class="p-4 text-center"><a href="${r['Landing Page'] || '#'}" target="_blank" class="text-fuchsia-500 text-lg">↗</a></td>
+                    <td class="p-4 text-zinc-400 text-[9px] uppercase">${r['Promocion'] || r['PROMOCIÓN'] || '-'}</td>
+                    <td class="p-4 text-center"><a href="${r['Landing Page'] || r['Link'] || '#'}" target="_blank" class="text-fuchsia-500 text-lg">↗</a></td>
                 </tr>
             `).join('');
 
-            // Gráfico 1: Recintos Desglosado por Productora
+            // Título de columna ajustado (Busca el <th> correspondiente en tu HTML y cámbialo a "DCTO / AUSPICIADOR")
+
+            // GRÁFICO RECINTOS (Sin Leyenda)
             const recLabels = [...new Set(data.map(r => r['Recinto']).filter(Boolean))];
             const prods = [...new Set(data.map(r => r._productoraUnica))];
-            const colorPalette = ['#ff00ff', '#ffffff', '#444444', '#888888', '#f0abfc'];
+            const colors = ['#ff00ff', '#ffffff', '#444444', '#888888', '#f0abfc'];
             
             if(chart1) chart1.destroy();
             chart1 = new Chart(document.getElementById('chartStacked'), {
@@ -329,13 +327,19 @@
                     datasets: prods.map((p, i) => ({
                         label: p,
                         data: recLabels.map(rec => data.filter(r => r['Recinto'] === rec && r._productoraUnica === p).length),
-                        backgroundColor: colorPalette[i % colorPalette.length]
+                        backgroundColor: colors[i % colors.length]
                     }))
                 },
-                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
+                options: { 
+                    indexAxis: 'y', 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } }, // ELIMINA LEYENDA
+                    scales: { x: { stacked: true }, y: { stacked: true } } 
+                }
             });
 
-            // Gráfico 2: Volumen Mensual
+            // GRÁFICO VOLUMEN MENSUAL (Corregido para detectar fechas correctamente)
             const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
             const mesData = new Array(12).fill(0);
             data.forEach(r => {
@@ -347,29 +351,34 @@
             });
 
             if(chart2) chart2.destroy();
-            chart2 = new Chart(document.getElementById('chartLine'), {
-                type: 'line',
-                data: { labels: meses, datasets: [{ data: mesData, borderColor: '#ff00ff', tension: 0.4, fill: true, backgroundColor: 'rgba(255, 0, 255, 0.05)' }] },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
+            // Asegúrate que en tu HTML el canvas se llame 'chartMonthly' o 'chartLine'
+            const ctx2 = document.getElementById('chartMonthly') || document.getElementById('chartLine');
+            if(ctx2) {
+                chart2 = new Chart(ctx2, {
+                    type: 'line',
+                    data: { labels: meses, datasets: [{ data: mesData, borderColor: '#ff00ff', tension: 0.4, fill: true, backgroundColor: 'rgba(255, 0, 255, 0.05)' }] },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
 
-            // Lista lateral: Anuncios últimos 14 días
+            // LISTA LATERAL
             const seen = new Set();
             const unique = data.filter(r => {
                 const id = (r['Evento/Artista'] || "") + (r['Fecha Show'] || "");
                 if(seen.has(id)) return false; seen.add(id); return true;
             });
             document.getElementById('recentList').innerHTML = unique.slice(0, 8).map(r => `
-                <div class="border-l-2 border-fuchsia-600 pl-4 py-4 bg-zinc-900/40 rounded-r-lg space-y-3 mb-3">
+                <div class="border-l-2 border-fuchsia-600 pl-4 py-4 bg-zinc-900/40 rounded-r-lg mb-3">
                     <p class="text-[9px] font-black text-fuchsia-500 uppercase">ANUNCIO: ${fDate(r['Fecha Anuncio'])} | ${r['Productora']}</p>
                     <p class="text-sm font-black text-white leading-tight">${r['Evento/Artista']}</p>
                     <p class="text-[10px] text-zinc-500 uppercase">${r['Recinto'] || '-'}</p>
-                    <div class="grid grid-cols-2 gap-2 text-[8px] text-zinc-500 font-bold border-t border-zinc-800 pt-2 uppercase">
-                        <div>PV: ${fDate(r['Fecha Preventa'])}</div><div>VG: ${fDate(r['Fecha Venta General'])}</div>
-                    </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 mt-2">
                         <span class="text-[8px] font-black uppercase px-2 py-1.5 rounded bg-zinc-800 text-fuchsia-400 flex-grow text-center">${r['Status Venta'] || 'DISPONIBLE'}</span>
-                        ${r['Landing Page'] ? `<a href="${r['Landing Page']}" target="_blank" class="text-[8px] font-black uppercase px-3 py-1.5 rounded btn-link">Tickets</a>` : ''}
+                        <a href="${r['Landing Page'] || r['Link'] || '#'}" target="_blank" class="text-[8px] font-black uppercase px-3 py-1.5 rounded bg-fuchsia-600 text-black">Tickets</a>
                     </div>
                 </div>
             `).join('');
