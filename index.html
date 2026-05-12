@@ -170,7 +170,7 @@
         let chart1, chart2;
         let syncTimer;
 
-        // --- LOGIN Y SESIÓN ---
+        // --- LOGIN ---
         function checkPassword() {
             const input = document.getElementById('passwordInput').value;
             if (input === CORRECT_PASSWORD) {
@@ -180,7 +180,6 @@
                 startSheetSync();
             } else {
                 document.getElementById('loginError').innerText = 'Contraseña incorrecta';
-                document.getElementById('passwordInput').value = '';
             }
         }
 
@@ -201,26 +200,17 @@
         function setSyncStatus(status) {
             const dot = document.getElementById('syncDot');
             const text = document.getElementById('syncText');
-            if (status === 'loading') {
-                dot.className = 'sync-dot loading';
-                text.innerText = 'Sincronizando...';
-            } else if (status === 'success') {
-                dot.className = 'sync-dot success';
-                text.innerText = 'Sincronizado';
-            } else {
-                dot.className = 'sync-dot error';
-                text.innerText = 'Error de conexión';
-            }
+            dot.className = 'sync-dot ' + (status === 'loading' ? 'loading' : status === 'success' ? 'success' : 'error');
+            text.innerText = status === 'loading' ? 'Sincronizando...' : status === 'success' ? 'Sincronizado' : 'Error';
         }
 
         async function loadFromGoogleSheet() {
             setSyncStatus('loading');
             try {
-                // Link con 'gviz' para forzar a Google a entregar datos limpios
+                // Datos principales (Pestaña 1 - GID 0)
                 const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=0&t=${new Date().getTime()}`;
                 const response = await fetch(url);
                 const csv = await response.text();
-
                 const lines = csv.split(/\r?\n/).filter(l => l.trim() !== "");
                 const separator = lines[0].includes(';') ? ';' : ',';
                 const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
@@ -231,19 +221,20 @@
                     const row = {};
                     headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
                     
-                    const prods = String(row['Productora'] || 'TBA').split('+').map(s => s.trim());
-                    prods.forEach(p => {
-                        rawData.push({ ...row, _productoraUnica: p });
+                    const pField = row['Productora'] || 'TBA';
+                    pField.split('+').forEach(p => {
+                        rawData.push({ ...row, _productoraUnica: p.trim() });
                     });
                 }
 
-                // Cargar Noticias
+                // Noticias (Pestaña 2 - GID 1114214532) - CORREGIDO
                 const newsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=1114214532&t=${new Date().getTime()}`;
                 const nRes = await fetch(newsUrl);
                 if (nRes.ok) {
                     const nCsv = await nRes.text();
                     const nLines = nCsv.split(/\r?\n/);
-                    if (nLines[1]) {
+                    if (nLines.length > 1) {
+                        // Buscamos la fila que NO sea el encabezado
                         const nVals = nLines[1].split(separator).map(v => v.trim().replace(/"/g, ''));
                         document.getElementById('newsTextB3').innerText = nVals[1] || "Sin noticias";
                         document.getElementById('newsTextC3').innerText = nVals[2] || "Sin lanzamientos";
@@ -254,7 +245,6 @@
                 applyFilters();
                 setSyncStatus('success');
             } catch (error) {
-                console.error(error);
                 setSyncStatus('error');
             }
         }
@@ -265,7 +255,7 @@
             syncTimer = setInterval(loadFromGoogleSheet, 30000);
         }
 
-        // --- LÓGICA DE VISUALIZACIÓN ---
+        // --- DASHBOARD LOGIC ---
         function fDate(val) {
             if (!val || isNaN(val)) return val || '-';
             let d = new Date(Math.round((val - 25569) * 86400 * 1000));
@@ -292,7 +282,8 @@
             const sF = document.getElementById('search').value.toLowerCase();
 
             const filtered = rawData.filter(r => {
-                let d = r['Fecha Anuncio'] ? new Date(Math.round((r['Fecha Anuncio'] - 25569) * 86400 * 1000)) : null;
+                let rawD = r['Fecha Anuncio'];
+                let d = (rawD && !isNaN(rawD)) ? new Date(Math.round((rawD - 25569) * 86400 * 1000)) : null;
                 if(d) d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
                 
                 const matchP = pF === 'All' || r._productoraUnica === pF;
@@ -304,15 +295,14 @@
                 return matchP && matchR && matchM && matchA && matchS;
             });
 
-            updateUI(filtered, pF, aF);
+            updateUI(filtered, aF);
         }
 
-        function updateUI(data, selectedProd, selectedAnio) {
+        function updateUI(data, selectedAnio) {
             document.getElementById('kpiTotal').innerText = data.length;
-            const soldOuts = data.filter(r => (r['Status Venta'] || "").toLowerCase().includes('sold out')).length;
-            document.getElementById('kpiSoldOut').innerText = soldOuts;
+            document.getElementById('kpiSoldOut').innerText = data.filter(r => (r['Status Venta'] || "").toLowerCase().includes('sold out')).length;
 
-            // Tabla principal
+            // Tabla Maestra
             document.getElementById('tableBody').innerHTML = data.map(r => `
                 <tr class="border-b border-zinc-900/50 hover:bg-zinc-900/50">
                     <td class="p-4 font-bold text-white text-xs">${r['Evento/Artista'] || '-'}</td>
@@ -322,33 +312,65 @@
                     <td class="p-4 text-zinc-200">${r['Productora'] || '-'}</td>
                     <td class="p-4 text-[10px] text-zinc-500 uppercase">PV: ${fDate(r['Fecha Preventa'])}<br>VG: ${fDate(r['Fecha Venta General'])}</td>
                     <td class="p-4 italic text-[10px] text-zinc-400 font-bold">${r['Status Venta'] || 'DISPONIBLE'}</td>
-                    <td class="p-4 text-center"><a href="${r['Landing Page'] || '#'}" target="_blank" class="text-fuchsia-500">↗</a></td>
+                    <td class="p-4 text-center"><a href="${r['Landing Page'] || '#'}" target="_blank" class="text-fuchsia-500 text-lg">↗</a></td>
                 </tr>
             `).join('');
 
-            // Gráfico
+            // Gráfico 1: Recintos Desglosado por Productora
             const recLabels = [...new Set(data.map(r => r['Recinto']).filter(Boolean))];
+            const prods = [...new Set(data.map(r => r._productoraUnica))];
+            const colorPalette = ['#ff00ff', '#ffffff', '#444444', '#888888', '#f0abfc'];
+            
             if(chart1) chart1.destroy();
             chart1 = new Chart(document.getElementById('chartStacked'), {
                 type: 'bar',
                 data: {
                     labels: recLabels,
-                    datasets: [{ label: 'Eventos', data: recLabels.map(rec => data.filter(r => r['Recinto'] === rec).length), backgroundColor: '#ff00ff' }]
+                    datasets: prods.map((p, i) => ({
+                        label: p,
+                        data: recLabels.map(rec => data.filter(r => r['Recinto'] === rec && r._productoraUnica === p).length),
+                        backgroundColor: colorPalette[i % colorPalette.length]
+                    }))
                 },
-                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
             });
 
-            // Lista lateral (Últimos anuncios)
+            // Gráfico 2: Volumen Mensual
+            const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+            const mesData = new Array(12).fill(0);
+            data.forEach(r => {
+                let rawD = r['Fecha Anuncio'];
+                if(rawD && !isNaN(rawD)) {
+                    let d = new Date(Math.round((rawD - 25569) * 86400 * 1000));
+                    mesData[d.getMonth()]++;
+                }
+            });
+
+            if(chart2) chart2.destroy();
+            chart2 = new Chart(document.getElementById('chartLine'), {
+                type: 'line',
+                data: { labels: meses, datasets: [{ data: mesData, borderColor: '#ff00ff', tension: 0.4, fill: true, backgroundColor: 'rgba(255, 0, 255, 0.05)' }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // Lista lateral: Anuncios últimos 14 días
             const seen = new Set();
             const unique = data.filter(r => {
                 const id = (r['Evento/Artista'] || "") + (r['Fecha Show'] || "");
                 if(seen.has(id)) return false; seen.add(id); return true;
             });
             document.getElementById('recentList').innerHTML = unique.slice(0, 8).map(r => `
-                <div class="border-l-2 border-fuchsia-600 pl-4 py-4 bg-zinc-900/40 rounded-r-lg">
-                    <p class="text-[9px] font-black text-fuchsia-500 uppercase">${fDate(r['Fecha Anuncio'])}</p>
-                    <p class="text-sm font-black text-white">${r['Evento/Artista']}</p>
+                <div class="border-l-2 border-fuchsia-600 pl-4 py-4 bg-zinc-900/40 rounded-r-lg space-y-3 mb-3">
+                    <p class="text-[9px] font-black text-fuchsia-500 uppercase">ANUNCIO: ${fDate(r['Fecha Anuncio'])} | ${r['Productora']}</p>
+                    <p class="text-sm font-black text-white leading-tight">${r['Evento/Artista']}</p>
                     <p class="text-[10px] text-zinc-500 uppercase">${r['Recinto'] || '-'}</p>
+                    <div class="grid grid-cols-2 gap-2 text-[8px] text-zinc-500 font-bold border-t border-zinc-800 pt-2 uppercase">
+                        <div>PV: ${fDate(r['Fecha Preventa'])}</div><div>VG: ${fDate(r['Fecha Venta General'])}</div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[8px] font-black uppercase px-2 py-1.5 rounded bg-zinc-800 text-fuchsia-400 flex-grow text-center">${r['Status Venta'] || 'DISPONIBLE'}</span>
+                        ${r['Landing Page'] ? `<a href="${r['Landing Page']}" target="_blank" class="text-[8px] font-black uppercase px-3 py-1.5 rounded btn-link">Tickets</a>` : ''}
+                    </div>
                 </div>
             `).join('');
         }
