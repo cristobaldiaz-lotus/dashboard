@@ -162,15 +162,15 @@
         </div>
     </div>
 
-    <script>
+   <script>
         const CORRECT_PASSWORD = 'flordeloto2026';
-        const SHEET_PUBLIC_LINK = 'https://docs.google.com/spreadsheets/d/1FfZenRVepS2mG-jvpG-WOyWSvlYtwLaUjD_tHW94r00/edit?usp=sharing';
-        const SHEET_ID = SHEET_PUBLIC_LINK.split('/d/')[1].split('/')[0];
+        const SHEET_ID = '1FfZenRVepS2mG-jvpG-WOyWSvlYtwLaUjD_tHW94r00';
         
         let rawData = [];
         let chart1, chart2;
         let syncTimer;
 
+        // --- LOGIN Y SESIÓN ---
         function checkPassword() {
             const input = document.getElementById('passwordInput').value;
             if (input === CORRECT_PASSWORD) {
@@ -197,6 +197,7 @@
             }
         });
 
+        // --- SINCRONIZACIÓN ---
         function setSyncStatus(status) {
             const dot = document.getElementById('syncDot');
             const text = document.getElementById('syncText');
@@ -215,83 +216,61 @@
         async function loadFromGoogleSheet() {
             setSyncStatus('loading');
             try {
-                // CARGA PESTAÑA ANUNCIOS (GID 0)
-                const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
-                const response = await fetch(csvUrl);
+                // Link con 'gviz' para forzar a Google a entregar datos limpios
+                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=0&t=${new Date().getTime()}`;
+                const response = await fetch(url);
                 const csv = await response.text();
-                const lines = csv.split('\n');
-                const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-                
+
+                const lines = csv.split(/\r?\n/).filter(l => l.trim() !== "");
+                const separator = lines[0].includes(';') ? ';' : ',';
+                const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
+
                 rawData = [];
                 for (let i = 1; i < lines.length; i++) {
-                    if (!lines[i].trim()) continue;
-                    const values = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/"/g, ''));
+                    const values = lines[i].split(separator).map(v => v.trim().replace(/"/g, ''));
                     const row = {};
                     headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+                    
                     const prods = String(row['Productora'] || 'TBA').split('+').map(s => s.trim());
-                    prods.forEach(p => { rawData.push({ ...row, _productoraUnica: p }); });
+                    prods.forEach(p => {
+                        rawData.push({ ...row, _productoraUnica: p });
+                    });
                 }
 
-                // CARGA PESTAÑA NOTICIAS (GID 1114214532)
-                const newsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1114214532`;
+                // Cargar Noticias
+                const newsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=1114214532&t=${new Date().getTime()}`;
                 const nRes = await fetch(newsUrl);
                 if (nRes.ok) {
                     const nCsv = await nRes.text();
-                    const nLines = nCsv.split('\n');
+                    const nLines = nCsv.split(/\r?\n/);
                     if (nLines[1]) {
-                        const nVals = nLines[1].split(',').map(v => v.trim().replace(/"/g, ''));
+                        const nVals = nLines[1].split(separator).map(v => v.trim().replace(/"/g, ''));
                         document.getElementById('newsTextB3').innerText = nVals[1] || "Sin noticias";
                         document.getElementById('newsTextC3').innerText = nVals[2] || "Sin lanzamientos";
                     }
                 }
+
                 initFilters();
                 applyFilters();
                 setSyncStatus('success');
-            } catch (e) {
+            } catch (error) {
+                console.error(error);
                 setSyncStatus('error');
             }
         }
 
         function startSheetSync() {
             loadFromGoogleSheet();
+            if (syncTimer) clearInterval(syncTimer);
             syncTimer = setInterval(loadFromGoogleSheet, 30000);
         }
-        // FUNCIONES DEL DASHBOARD
+
+        // --- LÓGICA DE VISUALIZACIÓN ---
         function fDate(val) {
             if (!val || isNaN(val)) return val || '-';
             let d = new Date(Math.round((val - 25569) * 86400 * 1000));
             d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
             return d.toLocaleDateString('es-CL');
-        }
-
-        function handleFile(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            document.getElementById('fileName').innerText = file.name;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const wb = XLSX.read(data, { type: 'array' });
-                const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                
-                rawData = [];
-                json.forEach(row => {
-                    const productoras = String(row['Productora'] || 'TBA').split('+').map(s => s.trim());
-                    productoras.forEach(p => {
-                        rawData.push({ ...row, _productoraUnica: p });
-                    });
-                });
-
-                try {
-                    const wsNews = wb.Sheets["Noticias"] || wb.Sheets[wb.SheetNames[1]];
-                    document.getElementById('newsTextB3').innerText = wsNews['B3']?.v || "Sin noticias";
-                    document.getElementById('newsTextC3').innerText = wsNews['C3']?.v || "Sin lanzamientos";
-                } catch(err) {}
-                
-                initFilters();
-                applyFilters();
-            };
-            reader.readAsArrayBuffer(file);
         }
 
         function initFilters() {
@@ -332,36 +311,10 @@
             document.getElementById('kpiTotal').innerText = data.length;
             const soldOuts = data.filter(r => (r['Status Venta'] || "").toLowerCase().includes('sold out')).length;
             document.getElementById('kpiSoldOut').innerText = soldOuts;
-            document.getElementById('kpiSoldOutLabel').innerText = selectedProd === 'All' ? "Total Sold Outs" : `Sold Outs ${selectedProd}`;
 
-            const seen = new Set();
-            const uniqueForList = data.filter(r => {
-                const id = (r['Evento/Artista'] || "") + (r['Fecha Show'] || "");
-                if(seen.has(id)) return false; seen.add(id);
-                const limit = new Date().setDate(new Date().getDate() - 14);
-                let d = new Date(Math.round((r['Fecha Anuncio'] - 25569) * 86400 * 1000));
-                return d >= limit;
-            }).sort((a,b) => b['Fecha Anuncio'] - a['Fecha Anuncio']);
-
-            document.getElementById('recentList').innerHTML = uniqueForList.map(r => `
-                <div class="border-l-2 border-fuchsia-600 pl-4 py-4 bg-zinc-900/40 rounded-r-lg space-y-3">
-                    <p class="text-[9px] font-black text-fuchsia-500 uppercase">ANUNCIO: ${fDate(r['Fecha Anuncio'])} | ${r['Productora']}</p>
-                    <p class="text-sm font-black text-white leading-tight">${r['Evento/Artista']}</p>
-                    <p class="text-[10px] text-zinc-500 font-bold uppercase">${r['Recinto'] || 'Por Definir'}</p>
-                    <div class="grid grid-cols-2 gap-2 text-[8px] text-zinc-500 font-bold border-t border-zinc-800 pt-2 uppercase">
-                        <div>PV: ${fDate(r['Fecha Preventa'])}</div><div>VG: ${fDate(r['Fecha Venta General'])}</div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-[8px] font-black uppercase px-2 py-1.5 rounded bg-zinc-800 text-fuchsia-400 flex-grow text-center">${r['Status Venta'] || 'DISPONIBLE'}</span>
-                        ${r['Landing Page'] ? `<a href="${r['Landing Page']}" target="_blank" class="text-[8px] font-black uppercase px-3 py-1.5 rounded btn-link">Tickets</a>` : ''}
-                    </div>
-                </div>
-            `).join('');
-
-            document.getElementById('tableBody').innerHTML = data.map(r => {
-                const dcto = r['Dcto'] ? r['Dcto'] + '% DCTO' : '-';
-                const promo = `${dcto} | ${r['Auspiciador'] ? String(r['Auspiciador']).toUpperCase() : '-'}`;
-                return `<tr class="border-b border-zinc-900/50 hover:bg-zinc-900/50">
+            // Tabla principal
+            document.getElementById('tableBody').innerHTML = data.map(r => `
+                <tr class="border-b border-zinc-900/50 hover:bg-zinc-900/50">
                     <td class="p-4 font-bold text-white text-xs">${r['Evento/Artista'] || '-'}</td>
                     <td class="p-4 text-zinc-500 text-[10px]">${fDate(r['Fecha Anuncio'])}</td>
                     <td class="p-4 text-fuchsia-400 font-bold">${fDate(r['Fecha Show'])}</td>
@@ -369,63 +322,35 @@
                     <td class="p-4 text-zinc-200">${r['Productora'] || '-'}</td>
                     <td class="p-4 text-[10px] text-zinc-500 uppercase">PV: ${fDate(r['Fecha Preventa'])}<br>VG: ${fDate(r['Fecha Venta General'])}</td>
                     <td class="p-4 italic text-[10px] text-zinc-400 font-bold">${r['Status Venta'] || 'DISPONIBLE'}</td>
-                    <td class="p-4 text-zinc-400 text-[10px] font-medium">${promo}</td>
-                    <td class="p-4 text-center"><a href="${r['Landing Page'] || '#'}" target="_blank" class="text-fuchsia-500 text-lg">↗</a></td>
-                </tr>`;
-            }).join('');
+                    <td class="p-4 text-center"><a href="${r['Landing Page'] || '#'}" target="_blank" class="text-fuchsia-500">↗</a></td>
+                </tr>
+            `).join('');
 
+            // Gráfico
             const recLabels = [...new Set(data.map(r => r['Recinto']).filter(Boolean))];
-            const prods = [...new Set(data.map(r => r._productoraUnica))];
-            const colorPalette = ['#ff00ff', '#ffffff', '#444444', '#888888', '#f0abfc', '#701a75', '#a1a1aa'];
-            
-            const datasets = prods.map((p, i) => ({
-                label: p,
-                data: recLabels.map(rec => data.filter(r => r['Recinto'] === rec && r._productoraUnica === p).length),
-                backgroundColor: colorPalette[i % colorPalette.length],
-                borderRadius: 2
-            }));
-
             if(chart1) chart1.destroy();
             chart1 = new Chart(document.getElementById('chartStacked'), {
-                type: 'bar', data: { labels: recLabels, datasets },
-                options: { 
-                    indexAxis: 'y', responsive: true, maintainAspectRatio: false, 
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: { enabled: true }
-                    },
-                    scales: { 
-                        x: { stacked: true, grid: { color: '#111' }, ticks: { color: '#444' } }, 
-                        y: { 
-                            stacked: true, 
-                            grid: { display: false }, 
-                            ticks: { color: '#bbb', font: {size: 11, weight: 'bold'}, autoSkip: false } 
-                        } 
-                    }
-                }
+                type: 'bar',
+                data: {
+                    labels: recLabels,
+                    datasets: [{ label: 'Eventos', data: recLabels.map(rec => data.filter(r => r['Recinto'] === rec).length), backgroundColor: '#ff00ff' }]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
             });
 
-            const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-            const mesData = new Array(12).fill(0);
-            const seenMonth = new Set();
-            data.forEach(r => {
+            // Lista lateral (Últimos anuncios)
+            const seen = new Set();
+            const unique = data.filter(r => {
                 const id = (r['Evento/Artista'] || "") + (r['Fecha Show'] || "");
-                if(!seenMonth.has(id)) {
-                    seenMonth.add(id);
-                    let d = new Date(Math.round((r['Fecha Anuncio'] - 25569) * 86400 * 1000));
-                    d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
-                    mesData[d.getMonth()]++;
-                }
+                if(seen.has(id)) return false; seen.add(id); return true;
             });
-
-            document.getElementById('chartLineTitle').innerText = selectedAnio === 'All' ? "Volumen Mensual (Todos los años)" : `Volumen Mensual Anuncios ${selectedAnio}`;
-            if(chart2) chart2.destroy();
-            chart2 = new Chart(document.getElementById('chartLine'), {
-                type: 'line', data: { labels: meses, datasets: [{ data: mesData, borderColor: '#ff00ff', tension: 0.4, fill: true, backgroundColor: 'rgba(255, 0, 255, 0.05)', borderWidth: 3 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, grid: { color: '#111' }, ticks: { color: '#444' } }, x: { grid: { display: false }, ticks: { color: '#888' } } }
-                }
-            });
+            document.getElementById('recentList').innerHTML = unique.slice(0, 8).map(r => `
+                <div class="border-l-2 border-fuchsia-600 pl-4 py-4 bg-zinc-900/40 rounded-r-lg">
+                    <p class="text-[9px] font-black text-fuchsia-500 uppercase">${fDate(r['Fecha Anuncio'])}</p>
+                    <p class="text-sm font-black text-white">${r['Evento/Artista']}</p>
+                    <p class="text-[10px] text-zinc-500 uppercase">${r['Recinto'] || '-'}</p>
+                </div>
+            `).join('');
         }
     </script>
 </body>
