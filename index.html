@@ -163,38 +163,31 @@
     </div>
 
     <script>
+       <script>
         const CORRECT_PASSWORD = 'flordeloto2026';
-        const SHEET_ID = '1FfZenRVepS2mG-jvpG-WOyWSvlYtwLaUjD_tHW94r00';
-        const SHEET_NAME = 'Anuncios';
-        const NEWS_SHEET = 'Noticias';
+        const SHEET_PUBLIC_LINK = 'https://docs.google.com/spreadsheets/d/1FfZenRVepS2mG-jvpG-WOyWSvlYtwLaUjD_tHW94r00/edit?usp=sharing';
+        const SHEET_ID = SHEET_PUBLIC_LINK.split('/d/')[1].split('/')[0];
         
         let rawData = [];
         let chart1, chart2;
         let syncTimer;
 
-        // FUNCIONES DE LOGIN
         function checkPassword() {
             const input = document.getElementById('passwordInput').value;
-            const errorDiv = document.getElementById('loginError');
-            
             if (input === CORRECT_PASSWORD) {
                 localStorage.setItem('lotusAuth', 'true');
                 document.getElementById('loginScreen').classList.add('hidden');
                 document.getElementById('dashboardScreen').classList.remove('hidden');
                 startSheetSync();
             } else {
-                errorDiv.innerText = 'Contraseña incorrecta';
+                document.getElementById('loginError').innerText = 'Contraseña incorrecta';
                 document.getElementById('passwordInput').value = '';
             }
         }
 
         function logout() {
             localStorage.removeItem('lotusAuth');
-            document.getElementById('dashboardScreen').classList.add('hidden');
-            document.getElementById('loginScreen').classList.remove('hidden');
-            document.getElementById('passwordInput').value = '';
-            document.getElementById('loginError').innerText = '';
-            if (syncTimer) clearInterval(syncTimer);
+            location.reload(); 
         }
 
         window.addEventListener('load', function() {
@@ -205,7 +198,6 @@
             }
         });
 
-        // SYNC INDICATOR
         function setSyncStatus(status) {
             const dot = document.getElementById('syncDot');
             const text = document.getElementById('syncText');
@@ -217,19 +209,16 @@
                 text.innerText = 'Sincronizado';
             } else {
                 dot.className = 'sync-dot error';
-                text.innerText = 'Error de sincronización';
+                text.innerText = 'Error de conexión';
             }
         }
 
-        // CARGAR DESDE GOOGLE SHEET (CSV EXPORT URL)
         async function loadFromGoogleSheet() {
             setSyncStatus('loading');
             try {
+                // CARGA PESTAÑA ANUNCIOS (GID 0)
                 const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
                 const response = await fetch(csvUrl);
-                
-                if (!response.ok) throw new Error('No se pudo cargar el Sheet');
-                
                 const csv = await response.text();
                 const lines = csv.split('\n');
                 const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
@@ -237,47 +226,29 @@
                 rawData = [];
                 for (let i = 1; i < lines.length; i++) {
                     if (!lines[i].trim()) continue;
-                    
-                    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                    const values = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/"/g, ''));
                     const row = {};
-                    headers.forEach((h, idx) => {
-                        row[h] = values[idx] || '';
-                    });
-                    
-                    // IGNORAR COLUMNA OK
-                    if (row['OK']) delete row['OK'];
-                    
-                    const productoras = String(row['Productora'] || 'TBA').split('+').map(s => s.trim());
-                    productoras.forEach(p => {
-                        rawData.push({ ...row, _productoraUnica: p });
-                    });
+                    headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+                    const prods = String(row['Productora'] || 'TBA').split('+').map(s => s.trim());
+                    prods.forEach(p => { rawData.push({ ...row, _productoraUnica: p }); });
                 }
-                
-                // CARGAR NOTICIAS
-                const newsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1`;
-                const newsResponse = await fetch(newsUrl);
-                if (newsResponse.ok) {
-                    const newsCsv = await newsResponse.text();
-                    const newsLines = newsCsv.split('\n');
-                    const newsHeaders = newsLines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-                    
-                    if (newsLines[1]) {
-                        const newsValues = newsLines[1].split(',').map(v => v.trim().replace(/"/g, ''));
-                        const newsRow = {};
-                        newsHeaders.forEach((h, idx) => {
-                            newsRow[h] = newsValues[idx] || '';
-                        });
-                        
-                        document.getElementById('newsTextB3').innerText = newsRow['B'] || "Sin noticias";
-                        document.getElementById('newsTextC3').innerText = newsRow['C'] || "Sin lanzamientos";
+
+                // CARGA PESTAÑA NOTICIAS (GID 1114214532)
+                const newsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1114214532`;
+                const nRes = await fetch(newsUrl);
+                if (nRes.ok) {
+                    const nCsv = await nRes.text();
+                    const nLines = nCsv.split('\n');
+                    if (nLines[1]) {
+                        const nVals = nLines[1].split(',').map(v => v.trim().replace(/"/g, ''));
+                        document.getElementById('newsTextB3').innerText = nVals[1] || "Sin noticias";
+                        document.getElementById('newsTextC3').innerText = nVals[2] || "Sin lanzamientos";
                     }
                 }
-                
                 initFilters();
                 applyFilters();
                 setSyncStatus('success');
-            } catch (error) {
-                console.error('Error cargando Sheet:', error);
+            } catch (e) {
                 setSyncStatus('error');
             }
         }
@@ -286,7 +257,6 @@
             loadFromGoogleSheet();
             syncTimer = setInterval(loadFromGoogleSheet, 30000);
         }
-
         // FUNCIONES DEL DASHBOARD
         function fDate(val) {
             if (!val || isNaN(val)) return val || '-';
