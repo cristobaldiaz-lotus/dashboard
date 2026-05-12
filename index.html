@@ -206,7 +206,7 @@
         async function loadFromGoogleSheet() {
             setSyncStatus('loading');
             try {
-                // 1. Carga Datos Principales
+                // 1. CARGA ANUNCIOS (Hoja 1 - GID 0)
                 const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=0&t=${new Date().getTime()}`;
                 const response = await fetch(url);
                 const csv = await response.text();
@@ -225,16 +225,15 @@
                     });
                 }
 
-                // 2. Carga Noticias - CORREGIDO (Salto de cabecera y selección de columnas)
+                // 2. CARGA NOTICIAS (Hoja 2 - GID 1114214532) - REFORZADO
                 const newsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=1114214532&t=${new Date().getTime()}`;
                 const nRes = await fetch(newsUrl);
                 if (nRes.ok) {
                     const nCsv = await nRes.text();
-                    const nLines = nCsv.split(/\r?\n/);
+                    const nLines = nCsv.split(/\r?\n/).filter(l => l.trim() !== "");
                     if (nLines.length > 1) {
-                        // Usamos la segunda línea (datos)
                         const nVals = nLines[1].split(separator).map(v => v.trim().replace(/"/g, ''));
-                        // En la pestaña noticias: B es índice 1, C es índice 2
+                        // Forzamos la lectura de columnas B (índice 1) y C (índice 2)
                         document.getElementById('newsTextB3').innerText = nVals[1] || "Sin noticias";
                         document.getElementById('newsTextC3').innerText = nVals[2] || "Sin lanzamientos";
                     }
@@ -244,6 +243,7 @@
                 applyFilters();
                 setSyncStatus('success');
             } catch (error) {
+                console.error(error);
                 setSyncStatus('error');
             }
         }
@@ -297,8 +297,13 @@
             document.getElementById('kpiTotal').innerText = data.length;
             document.getElementById('kpiSoldOut').innerText = data.filter(r => (r['Status Venta'] || "").toLowerCase().includes('sold out')).length;
 
-            // TABLA INFERIOR - CORREGIDO TÍTULO Y LINK
-            document.getElementById('tableBody').innerHTML = data.map(r => `
+            // TABLA - DCTO / AUSPICIOS Y LINK CORREGIDOS
+            document.getElementById('tableBody').innerHTML = data.map(r => {
+                const dcto = r['Dcto'] ? r['Dcto'] + '%' : '-';
+                const ausp = r['Auspiciador'] || r['Auspicios'] || '-';
+                const promo = `${dcto} / ${ausp}`;
+                
+                return `
                 <tr class="border-b border-zinc-900/50 hover:bg-zinc-900/50">
                     <td class="p-4 font-bold text-white text-xs">${r['Evento/Artista'] || '-'}</td>
                     <td class="p-4 text-zinc-500 text-[10px]">${fDate(r['Fecha Anuncio'])}</td>
@@ -307,16 +312,14 @@
                     <td class="p-4 text-zinc-200">${r['Productora'] || '-'}</td>
                     <td class="p-4 text-[10px] text-zinc-500 uppercase">PV: ${fDate(r['Fecha Preventa'])}<br>VG: ${fDate(r['Fecha Venta General'])}</td>
                     <td class="p-4 italic text-[10px] text-zinc-400 font-bold">${r['Status Venta'] || 'DISPONIBLE'}</td>
-                    <td class="p-4 text-zinc-400 text-[9px] uppercase">${r['Promocion'] || r['PROMOCIÓN'] || '-'}</td>
+                    <td class="p-4 text-zinc-400 text-[9px] uppercase font-medium">${promo}</td>
                     <td class="p-4 text-center"><a href="${r['Landing Page'] || r['Link'] || '#'}" target="_blank" class="text-fuchsia-500 text-lg">↗</a></td>
-                </tr>
-            `).join('');
+                </tr>`;
+            }).join('');
 
-            // Título de columna ajustado (Busca el <th> correspondiente en tu HTML y cámbialo a "DCTO / AUSPICIADOR")
-
-            // GRÁFICO RECINTOS (Sin Leyenda)
+            // GRÁFICO RECINTOS (SIN LEYENDA)
             const recLabels = [...new Set(data.map(r => r['Recinto']).filter(Boolean))];
-            const prods = [...new Set(data.map(r => r._productoraUnica))];
+            const prodList = [...new Set(data.map(r => r._productoraUnica))];
             const colors = ['#ff00ff', '#ffffff', '#444444', '#888888', '#f0abfc'];
             
             if(chart1) chart1.destroy();
@@ -324,22 +327,20 @@
                 type: 'bar',
                 data: {
                     labels: recLabels,
-                    datasets: prods.map((p, i) => ({
+                    datasets: prodList.map((p, i) => ({
                         label: p,
                         data: recLabels.map(rec => data.filter(r => r['Recinto'] === rec && r._productoraUnica === p).length),
                         backgroundColor: colors[i % colors.length]
                     }))
                 },
                 options: { 
-                    indexAxis: 'y', 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    plugins: { legend: { display: false } }, // ELIMINA LEYENDA
-                    scales: { x: { stacked: true }, y: { stacked: true } } 
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { stacked: true }, y: { stacked: true } }
                 }
             });
 
-            // GRÁFICO VOLUMEN MENSUAL (Corregido para detectar fechas correctamente)
+            // GRÁFICO VOLUMEN MENSUAL (INALTERABLE)
             const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
             const mesData = new Array(12).fill(0);
             data.forEach(r => {
@@ -351,16 +352,27 @@
             });
 
             if(chart2) chart2.destroy();
-            // Asegúrate que en tu HTML el canvas se llame 'chartMonthly' o 'chartLine'
-            const ctx2 = document.getElementById('chartMonthly') || document.getElementById('chartLine');
-            if(ctx2) {
-                chart2 = new Chart(ctx2, {
+            // Busca 'chartLine' como ID prioritario según tu código original
+            const canvas2 = document.getElementById('chartLine');
+            if(canvas2) {
+                chart2 = new Chart(canvas2, {
                     type: 'line',
-                    data: { labels: meses, datasets: [{ data: mesData, borderColor: '#ff00ff', tension: 0.4, fill: true, backgroundColor: 'rgba(255, 0, 255, 0.05)' }] },
+                    data: { 
+                        labels: meses, 
+                        datasets: [{ 
+                            data: mesData, 
+                            borderColor: '#ff00ff', 
+                            tension: 0.4, 
+                            fill: true, 
+                            backgroundColor: 'rgba(255, 0, 255, 0.05)',
+                            borderWidth: 3
+                        }] 
+                    },
                     options: { 
                         responsive: true, 
                         maintainAspectRatio: false,
-                        plugins: { legend: { display: false } }
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true } }
                     }
                 });
             }
