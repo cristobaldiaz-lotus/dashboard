@@ -42,8 +42,10 @@
     <div id="loginScreen" class="login-container">
         <div class="login-card">
             <div class="text-center mb-8">
-                <img src="https://s3.us-east-2.amazonaws.com/bucket-vform-production/production/Institucion-41/Archivos/Logos/logo-1/Lotus_logo-1.png?1570651579" alt="Lotus" class="h-12 mx-auto mb-4">
-                <h2 class="text-2xl font-black tracking-[0.1em]">LOTUS ANALYTICS</h2>
+                <div class="bg-white inline-block px-6 py-4 rounded-xl mb-4 shadow-lg">
+                    <img src="https://s3.us-east-2.amazonaws.com/bucket-vform-production/production/Institucion-41/Archivos/Logos/logo-1/Lotus_logo-1.png?1570651579" alt="Lotus" class="h-10 mx-auto">
+                </div>
+                <h2 class="text-2xl font-black tracking-[0.3em] text-zinc-200">ANALYTICS</h2>
                 <p class="text-zinc-500 text-sm mt-2">Acceso Restringido</p>
             </div>
             <input type="password" id="passwordInput" placeholder="Ingresa la contraseña..." onkeypress="if(event.key === 'Enter') checkPassword()">
@@ -189,17 +191,15 @@
             text.innerText = status === 'loading' ? 'Sincronizando...' : status === 'success' ? 'Sincronizado' : 'Error';
         }
 
+        // Parseador inteligente de Fechas
         function parseDate(val) {
             if (!val) return null;
-            // Si viene de Google Sheets como número de serie
             if (!isNaN(val) && parseFloat(val) > 30000) {
                 return new Date(Math.round((val - 25569) * 86400 * 1000));
             }
-            // Si viene como string
             const s = String(val).trim();
             const parts = s.split(/[-\/]/);
             if (parts.length === 3) {
-                // Asumimos DD-MM-YYYY
                 const d = parseInt(parts[0]);
                 const m = parseInt(parts[1]) - 1;
                 const y = parts[2].length === 2 ? 2000 + parseInt(parts[2]) : parseInt(parts[2]);
@@ -209,6 +209,34 @@
             return isNaN(d.getTime()) ? null : d;
         }
 
+        function fDate(val) {
+            const d = parseDate(val);
+            if (!d) return val || '-';
+            return d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        // --- TRADUCTOR DE CSV ---
+        // (Esto es lo que evita que los "enters" de tus noticias y fechas rompan la conexión)
+        function parseCSV(str) {
+            const sep = str.split('\n')[0].includes(';') ? ';' : ',';
+            const arr = [];
+            let quote = false;
+            let row = [];
+            let col = "";
+            for (let i = 0; i < str.length; i++) {
+                let cc = str[i], nc = str[i+1];
+                if (cc === '"' && quote && nc === '"') { col += '"'; i++; continue; }
+                if (cc === '"') { quote = !quote; continue; }
+                if (cc === sep && !quote) { row.push(col.trim()); col = ""; continue; }
+                if (cc === '\n' && !quote) { row.push(col.trim()); arr.push(row); col = ""; row = []; continue; }
+                if (cc === '\r' && !quote) continue;
+                col += cc;
+            }
+            if (col || row.length) { row.push(col.trim()); arr.push(row); }
+            return arr.filter(r => r.some(c => c !== "")); // Limpia filas en blanco
+        }
+
+        // --- LA FUNCIÓN DE CARGA CORREGIDA ---
         async function loadFromGoogleSheet() {
             setSyncStatus('loading');
             try {
@@ -216,60 +244,52 @@
                 const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=0&t=${new Date().getTime()}`;
                 const response = await fetch(url);
                 const csv = await response.text();
-                const lines = csv.split(/\r?\n/).filter(l => l.trim() !== "");
-                const separator = lines[0].includes(';') ? ';' : ',';
-                const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
+                
+                // Usamos el traductor de CSV en vez del "split" simple
+                const rows = parseCSV(csv);
+                const headers = rows[0];
 
                 rawData = [];
-                for (let i = 1; i < lines.length; i++) {
-                    const values = lines[i].split(separator).map(v => v.trim().replace(/"/g, ''));
+                for (let i = 1; i < rows.length; i++) {
+                    const vals = rows[i];
                     const row = {};
-                    headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+                    headers.forEach((h, idx) => { row[h] = vals[idx] || ''; });
                     const pField = row['Productora'] || 'TBA';
                     pField.split('+').forEach(p => {
                         rawData.push({ ...row, _productoraUnica: p.trim() });
                     });
                 }
 
-         // 2. CARGA NOTICIAS (Soporta saltos de línea y nuevas semanas agregadas arriba)
+                // 2. CARGA NOTICIAS (Tu GID original)
+                // Se agregó la lógica inteligente para encontrar "Noticias"
                 const newsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=1114214532&t=${new Date().getTime()}`;
                 const nRes = await fetch(newsUrl);
                 if (nRes.ok) {
                     const nCsv = await nRes.text();
                     
-                    // Mini-traductor para procesar los "Enters" (saltos de línea) dentro de las celdas de lanzamientos
-                    const nSep = nCsv.split('\n')[0].includes(';') ? ';' : ',';
-                    const nRows = [];
-                    let row = [], col = "", quote = false;
-                    for (let i = 0; i < nCsv.length; i++) {
-                        let c = nCsv[i], nc = nCsv[i+1];
-                        if (c === '"' && quote && nc === '"') { col += '"'; i++; continue; }
-                        if (c === '"') { quote = !quote; continue; }
-                        if (c === nSep && !quote) { row.push(col.trim()); col = ""; continue; }
-                        if (c === '\n' && !quote) { row.push(col.trim()); nRows.push(row); col = ""; row = []; continue; }
-                        if (c === '\r' && !quote) continue;
-                        col += c;
-                    }
-                    if (col || row.length) { row.push(col.trim()); nRows.push(row); }
+                    // Protege si Google tira error
+                    if (!nCsv.trim().startsWith("<!DOCTYPE") && !nCsv.includes('<html')) {
+                        const nRows = parseCSV(nCsv);
+                        
+                        let noticiaFinal = "Sin noticias";
+                        let lanzamientoFinal = "Sin lanzamientos";
 
-                    let noticiaFinal = "Sin noticias";
-                    let lanzamientoFinal = "Sin lanzamientos";
-
-                    // Buscamos de arriba hacia abajo. Al encontrar los títulos "Noticias", leemos la fila de abajo.
-                    // Esto asegura que SIEMPRE tome tu semana más reciente, sin importar cuántas agregues.
-                    for (let i = 0; i < nRows.length; i++) {
-                        if (nRows[i][1] === "Noticias" || nRows[i][2] === "Lanzamientos") {
-                            if (nRows[i + 1]) { // La fila justo debajo del título
-                                noticiaFinal = nRows[i + 1][1] || "Sin noticias";
-                                lanzamientoFinal = nRows[i + 1][2] || "Sin lanzamientos";
+                        // Buscador Inteligente: Recorre el Excel de arriba hacia abajo
+                        for (let i = 0; i < nRows.length; i++) {
+                            // En tu hoja de Noticias, la palabra "Noticias" está en la columna B (Índice 1)
+                            if (nRows[i][1] === "Noticias" || nRows[i][2] === "Lanzamientos") {
+                                // Toma la fila INMEDIATAMENTE debajo
+                                if (nRows[i + 1]) {
+                                    noticiaFinal = nRows[i + 1][1] || "Sin noticias";
+                                    lanzamientoFinal = nRows[i + 1][2] || "Sin lanzamientos";
+                                }
+                                break; // Paramos en la primera que encontramos (la semana más nueva)
                             }
-                            break; // Encontramos la última semana, paramos de buscar.
                         }
-                    }
 
-                    document.getElementById('newsTextB3').innerText = noticiaFinal;
-                    document.getElementById('newsTextC3').innerText = lanzamientoFinal;
-                }
+                        document.getElementById('newsTextB3').innerText = noticiaFinal;
+                        document.getElementById('newsTextC3').innerText = lanzamientoFinal;
+                    }
                 }
 
                 initFilters();
@@ -285,12 +305,6 @@
             loadFromGoogleSheet();
             if (syncTimer) clearInterval(syncTimer);
             syncTimer = setInterval(loadFromGoogleSheet, 30000);
-        }
-
-        function fDate(val) {
-            const d = parseDate(val);
-            if (!d) return val || '-';
-            return d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
         function initFilters() {
@@ -332,6 +346,7 @@
             document.getElementById('tableBody').innerHTML = data.map(r => {
                 const dcto = r['Dcto'] ? r['Dcto'] + '%' : '-';
                 const ausp = r['Auspicios'] || r['Auspiciador'] || '-';
+                const promo = `${dcto} / ${ausp}`;
                 return `
                 <tr class="border-b border-zinc-900/50 hover:bg-zinc-900/50">
                     <td class="p-4 font-bold text-white">${r['Evento/Artista'] || '-'}</td>
@@ -341,7 +356,7 @@
                     <td class="p-4 text-zinc-200">${r['Productora'] || '-'}</td>
                     <td class="p-4 uppercase">PV: ${fDate(r['Fecha Preventa'])}<br>VG: ${fDate(r['Fecha Venta General'])}</td>
                     <td class="p-4 italic font-bold">${r['Status Venta'] || 'DISPONIBLE'}</td>
-                    <td class="p-4 text-zinc-400 uppercase font-medium">${dcto} / ${ausp}</td>
+                    <td class="p-4 text-zinc-400 uppercase font-medium">${promo}</td>
                     <td class="p-4 text-center"><a href="${r['Landing Page'] || r['Link'] || '#'}" target="_blank" class="text-fuchsia-500 text-lg">↗</a></td>
                 </tr>`;
             }).join('');
@@ -378,34 +393,46 @@
                 return chartAnoFilter === 'All' || (d && d.getFullYear().toString() === chartAnoFilter);
             });
 
-            const seenMonth = new Set();
+            const seenForMonth = new Set();
             chartDataFiltered.forEach(r => {
                 const id = (r['Evento/Artista'] || "") + (r['Fecha Show'] || "");
-                if(!seenMonth.has(id)) {
-                    seenMonth.add(id);
-                    const d = parseDate(r['Fecha Anuncio']);
-                    if(d) mesData[d.getMonth()]++;
+                if (!seenForMonth.has(id)) {
+                    seenForMonth.add(id);
+                    let d = parseDate(r['Fecha Anuncio']);
+                    if(d && !isNaN(d.getTime())) {
+                        const month = d.getMonth();
+                        if(month >= 0 && month < 12) {
+                            mesData[month]++;
+                        }
+                    }
                 }
             });
 
             document.getElementById('chartLineTitle').innerText = chartAnoFilter === 'All' ? 'Volumen Mensual (Todos los años)' : `Volumen Mensual ${chartAnoFilter}`;
 
             if(chart2) chart2.destroy();
-            chart2 = new Chart(document.getElementById('chartLine'), {
-                type: 'line',
-                data: { 
-                    labels: meses, 
-                    datasets: [{ 
-                        data: mesData, borderColor: '#ff00ff', tension: 0.4, fill: true, 
-                        backgroundColor: 'rgba(255, 0, 255, 0.05)', borderWidth: 3 
-                    }] 
-                },
-                options: { 
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-                }
-            });
+            const canvas2 = document.getElementById('chartLine');
+            if(canvas2) {
+                chart2 = new Chart(canvas2, {
+                    type: 'line',
+                    data: { 
+                        labels: meses, 
+                        datasets: [{ 
+                            data: mesData, borderColor: '#ff00ff', tension: 0.4, fill: true, 
+                            backgroundColor: 'rgba(255, 0, 255, 0.05)', borderWidth: 3,
+                            pointBackgroundColor: '#ff00ff', pointRadius: 5
+                        }] 
+                    },
+                    options: { 
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { 
+                            y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                            x: { ticks: { font: { size: 11 } } }
+                        }
+                    }
+                });
+            }
 
             // RECENT LIST
             const unique = data.filter((r, i, self) => 
@@ -413,7 +440,7 @@
             );
             document.getElementById('recentList').innerHTML = unique.slice(0, 8).map(r => `
                 <div class="border-l-2 border-fuchsia-600 pl-4 py-4 bg-zinc-900/40 rounded-r-lg mb-3">
-                    <p class="text-[9px] font-black text-fuchsia-500 uppercase">${fDate(r['Fecha Anuncio'])} | ${r['Productora']}</p>
+                    <p class="text-[9px] font-black text-fuchsia-500 uppercase">ANUNCIO: ${fDate(r['Fecha Anuncio'])} | ${r['Productora']}</p>
                     <p class="text-sm font-black text-white leading-tight">${r['Evento/Artista']}</p>
                     <p class="text-[10px] text-zinc-500 uppercase">${r['Recinto'] || '-'}</p>
                     <div class="flex items-center gap-2 mt-2">
