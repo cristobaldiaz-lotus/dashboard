@@ -39,6 +39,8 @@
         .sync-dot.success { background: #10b981; }
         .sync-dot.error { background: #ef4444; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .chart-wrapper { position: relative; overflow-x: auto; }
     </style>
 </head>
 <body class="p-4 lg:p-8">
@@ -133,11 +135,11 @@
                 <div class="grid grid-cols-1 gap-8">
                     <div class="card p-8">
                         <h3 class="text-[10px] font-black uppercase mb-8 text-zinc-500 tracking-[0.3em] text-center">Anuncios por Recinto</h3>
-                        <div class="h-[500px] w-full"><canvas id="chartStacked"></canvas></div>
+                        <div class="chart-wrapper h-[600px] w-full"><canvas id="chartStacked"></canvas></div>
                     </div>
                     <div class="card p-8">
                         <h3 id="chartLineTitle" class="text-[10px] font-black uppercase mb-8 text-zinc-500 tracking-[0.3em] text-center">Volumen Mensual de Anuncios</h3>
-                        <div class="h-[300px] w-full"><canvas id="chartLine"></canvas></div>
+                        <div class="h-[350px] w-full"><canvas id="chartLine"></canvas></div>
                     </div>
                 </div>
 
@@ -202,6 +204,16 @@
             text.innerText = status === 'loading' ? 'Sincronizando...' : status === 'success' ? 'Sincronizado' : 'Error';
         }
 
+        function parseDate(dateStr) {
+            if (!dateStr) return null;
+            // Si es número (Excel), convertir
+            if (!isNaN(dateStr)) {
+                return new Date(Math.round((dateStr - 25569) * 86400 * 1000));
+            }
+            // Si es string, intentar parsear
+            return new Date(dateStr);
+        }
+
         async function loadFromGoogleSheet() {
             setSyncStatus('loading');
             try {
@@ -224,17 +236,18 @@
                     });
                 }
 
-                // 2. CARGA NOTICIAS (Hoja 2 - Primera fila con datos)
+                // 2. CARGA NOTICIAS (Hoja 2 - GID 1114214532, Fila 1 - FILA CON DATOS)
                 const newsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=1114214532&t=${new Date().getTime()}`;
                 const nRes = await fetch(newsUrl);
                 if (nRes.ok) {
                     const nCsv = await nRes.text();
                     const nLines = nCsv.split(/\r?\n/).filter(l => l.trim() !== "");
-                    if (nLines.length > 0) {
-                        const nHeaders = nLines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
-                        const nVals = nLines[0].split(separator).map(v => v.trim().replace(/"/g, ''));
+                    if (nLines.length > 1) {  // Asegura que hay al menos 2 líneas (encabezado + datos)
+                        const nSep = nLines[0].includes(';') ? ';' : ',';
+                        // LEE FILA 1 (SEGUNDA LÍNEA - ÍNDICE 1)
+                        const nVals = nLines[1].split(nSep).map(v => v.trim().replace(/"/g, ''));
                         
-                        // Busca las columnas B y C (índices 1 y 2)
+                        // Columna B (índice 1) y Columna C (índice 2)
                         const newsValue = nVals[1] || "Sin noticias";
                         const releaseValue = nVals[2] || "Sin lanzamientos";
                         
@@ -314,8 +327,7 @@
             const sF = document.getElementById('search').value.toLowerCase();
 
             const filtered = rawData.filter(r => {
-                let rawD = r['Fecha Anuncio'];
-                let d = (rawD && !isNaN(rawD)) ? new Date(Math.round((rawD - 25569) * 86400 * 1000)) : null;
+                let d = parseDate(r['Fecha Anuncio']);
                 if(d) d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
                 const matchP = pF === 'All' || r._productoraUnica === pF;
                 const matchR = rF === 'All' || r['Recinto'] === rF;
@@ -331,7 +343,7 @@
             document.getElementById('kpiTotal').innerText = data.length;
             document.getElementById('kpiSoldOut').innerText = data.filter(r => (r['Status Venta'] || "").toLowerCase().includes('sold out')).length;
 
-            // TABLA - DCTO / AUSPICIOS CORREGIDOS
+            // TABLA
             document.getElementById('tableBody').innerHTML = data.map(r => {
                 const dcto = r['Dcto'] ? r['Dcto'] + '%' : '-';
                 const ausp = r['Auspicios'] || r['Auspiciador'] || '-';
@@ -351,10 +363,10 @@
                 </tr>`;
             }).join('');
 
-            // GRÁFICO RECINTOS (SIN LEYENDA)
-            const recLabels = [...new Set(data.map(r => r['Recinto']).filter(Boolean))];
+            // GRÁFICO RECINTOS - CON ALTURA DINÁMICA PARA MOSTRAR TODOS
+            const recLabels = [...new Set(data.map(r => r['Recinto']).filter(Boolean))].sort();
             const prodList = [...new Set(data.map(r => r._productoraUnica))];
-            const colors = ['#ff00ff', '#ffffff', '#444444', '#888888', '#f0abfc'];
+            const colors = ['#ff00ff', '#ffffff', '#444444', '#888888', '#f0abfc', '#701a75', '#a1a1aa'];
             
             if(chart1) chart1.destroy();
             chart1 = new Chart(document.getElementById('chartStacked'), {
@@ -368,32 +380,39 @@
                     }))
                 },
                 options: { 
-                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    indexAxis: 'y', 
+                    responsive: true, 
+                    maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    scales: { x: { stacked: true }, y: { stacked: true } }
+                    scales: { 
+                        x: { stacked: true }, 
+                        y: { 
+                            stacked: true,
+                            ticks: { font: { size: 10 } }
+                        } 
+                    }
                 }
             });
 
-            // GRÁFICO VOLUMEN MENSUAL - CORREGIDO PARA EVITAR DUPLICADOS
+            // GRÁFICO VOLUMEN MENSUAL - CON PARSING DE FECHAS CORRECTO
             const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
             const mesData = new Array(12).fill(0);
             
-            // Usa Set para evitar contar duplicados
             const seenForMonth = new Set();
             data.forEach(r => {
                 const id = (r['Evento/Artista'] || "") + (r['Fecha Show'] || "");
                 if (!seenForMonth.has(id)) {
                     seenForMonth.add(id);
-                    let rawD = r['Fecha Anuncio'];
-                    if(rawD && !isNaN(rawD)) {
-                        let d = new Date(Math.round((rawD - 25569) * 86400 * 1000));
+                    let d = parseDate(r['Fecha Anuncio']);
+                    if(d && !isNaN(d.getTime())) {
                         d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
-                        mesData[d.getMonth()]++;
+                        const month = d.getMonth();
+                        if(month >= 0 && month < 12) {
+                            mesData[month]++;
+                        }
                     }
                 }
             });
-
-            document.getElementById('chartLineTitle').innerText = 'Volumen Mensual de Anuncios';
 
             if(chart2) chart2.destroy();
             const canvas2 = document.getElementById('chartLine');
@@ -407,10 +426,12 @@
                             borderColor: '#ff00ff', 
                             tension: 0.4, 
                             fill: true, 
-                            backgroundColor: 'rgba(255, 0, 255, 0.05)',
+                            backgroundColor: 'rgba(255, 0, 255, 0.1)',
                             borderWidth: 3,
                             pointBackgroundColor: '#ff00ff',
-                            pointRadius: 4
+                            pointRadius: 5,
+                            pointBorderWidth: 2,
+                            pointBorderColor: '#000'
                         }] 
                     },
                     options: { 
@@ -418,7 +439,17 @@
                         maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
                         scales: { 
-                            y: { beginAtZero: true, ticks: { stepSize: 1 } } 
+                            y: { 
+                                beginAtZero: true, 
+                                ticks: { 
+                                    stepSize: 1,
+                                    callback: function(value) { return value; }
+                                },
+                                max: Math.max(...mesData) + 1
+                            },
+                            x: {
+                                ticks: { font: { size: 11 } }
+                            }
                         }
                     }
                 });
