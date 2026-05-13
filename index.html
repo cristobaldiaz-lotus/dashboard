@@ -138,7 +138,13 @@
                         <div class="chart-wrapper h-[600px] w-full"><canvas id="chartStacked"></canvas></div>
                     </div>
                     <div class="card p-8">
-                        <h3 id="chartLineTitle" class="text-[10px] font-black uppercase mb-8 text-zinc-500 tracking-[0.3em] text-center">Volumen Mensual de Anuncios</h3>
+                        <div class="flex justify-between items-center mb-8">
+                            <h3 id="chartLineTitle" class="text-[10px] font-black uppercase text-zinc-500 tracking-[0.3em]">Volumen Mensual de Anuncios</h3>
+                            <select id="filterChartAnio" onchange="applyFilters()" class="bg-zinc-900 border border-zinc-800 text-white text-[10px] p-2 rounded outline-none focus:border-fuchsia-500" style="width: 120px;">
+                                <option value="All">Todos los años</option>
+                                <option value="2026">2026</option><option value="2025">2025</option><option value="2024">2024</option>
+                            </select>
+                        </div>
                         <div class="h-[350px] w-full"><canvas id="chartLine"></canvas></div>
                     </div>
                 </div>
@@ -204,13 +210,26 @@
             text.innerText = status === 'loading' ? 'Sincronizando...' : status === 'success' ? 'Sincronizado' : 'Error';
         }
 
+        // Parsear fechas en formato DD-MM-YYYY o DD/MM/YYYY
         function parseDate(dateStr) {
             if (!dateStr) return null;
-            // Si es número (Excel), convertir
-            if (!isNaN(dateStr)) {
+            
+            // Si es número (Excel)
+            if (!isNaN(dateStr) && dateStr.toString().length > 4) {
                 return new Date(Math.round((dateStr - 25569) * 86400 * 1000));
             }
-            // Si es string, intentar parsear
+            
+            // Si es string DD-MM-YYYY o DD/MM/YYYY
+            if (typeof dateStr === 'string') {
+                const parts = dateStr.split(/[-\/]/);
+                if (parts.length === 3) {
+                    const day = parseInt(parts[0]);
+                    const month = parseInt(parts[1]) - 1; // Mes es 0-indexed en JS
+                    const year = parseInt(parts[2]);
+                    return new Date(year, month, day);
+                }
+            }
+            
             return new Date(dateStr);
         }
 
@@ -236,16 +255,18 @@
                     });
                 }
 
-                // 2. CARGA NOTICIAS (Hoja 2 - GID 1114214532, Fila 1 - FILA CON DATOS)
+                // 2. CARGA NOTICIAS (Hoja 2 - GID 1114214532, Lee B3 y C3)
                 const newsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=1114214532&t=${new Date().getTime()}`;
                 const nRes = await fetch(newsUrl);
                 if (nRes.ok) {
                     const nCsv = await nRes.text();
                     const nLines = nCsv.split(/\r?\n/).filter(l => l.trim() !== "");
-                    if (nLines.length > 1) {  // Asegura que hay al menos 2 líneas (encabezado + datos)
+                    
+                    if (nLines.length > 2) {  // Al menos 3 líneas (encabezado + 2 filas de datos)
                         const nSep = nLines[0].includes(';') ? ';' : ',';
-                        // LEE FILA 1 (SEGUNDA LÍNEA - ÍNDICE 1)
-                        const nVals = nLines[1].split(nSep).map(v => v.trim().replace(/"/g, ''));
+                        
+                        // FILA 3 (índice 2 - contando desde 0)
+                        const nVals = nLines[2].split(nSep).map(v => v.trim().replace(/"/g, ''));
                         
                         // Columna B (índice 1) y Columna C (índice 2)
                         const newsValue = nVals[1] || "Sin noticias";
@@ -272,9 +293,9 @@
         }
 
         function fDate(val) {
-            if (!val || isNaN(val)) return val || '-';
-            let d = new Date(Math.round((val - 25569) * 86400 * 1000));
-            d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+            if (!val) return '-';
+            let d = parseDate(val);
+            if (!d || isNaN(d.getTime())) return val || '-';
             return d.toLocaleDateString('es-CL');
         }
 
@@ -298,8 +319,8 @@
 
                 try {
                     const wsNews = wb.Sheets["Noticias"] || wb.Sheets[wb.SheetNames[1]];
-                    document.getElementById('newsTextB3').innerText = wsNews['B1']?.v || "Sin noticias";
-                    document.getElementById('newsTextC3').innerText = wsNews['C1']?.v || "Sin lanzamientos";
+                    document.getElementById('newsTextB3').innerText = wsNews['B3']?.v || "Sin noticias";
+                    document.getElementById('newsTextC3').innerText = wsNews['C3']?.v || "Sin lanzamientos";
                 } catch(err) {}
                 
                 initFilters();
@@ -329,6 +350,7 @@
             const filtered = rawData.filter(r => {
                 let d = parseDate(r['Fecha Anuncio']);
                 if(d) d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+                
                 const matchP = pF === 'All' || r._productoraUnica === pF;
                 const matchR = rF === 'All' || r['Recinto'] === rF;
                 const matchM = mF === 'All' || (d && d.getMonth().toString() === mF);
@@ -363,7 +385,7 @@
                 </tr>`;
             }).join('');
 
-            // GRÁFICO RECINTOS - CON ALTURA DINÁMICA PARA MOSTRAR TODOS
+            // GRÁFICO RECINTOS
             const recLabels = [...new Set(data.map(r => r['Recinto']).filter(Boolean))].sort();
             const prodList = [...new Set(data.map(r => r._productoraUnica))];
             const colors = ['#ff00ff', '#ffffff', '#444444', '#888888', '#f0abfc', '#701a75', '#a1a1aa'];
@@ -394,18 +416,28 @@
                 }
             });
 
-            // GRÁFICO VOLUMEN MENSUAL - CON PARSING DE FECHAS CORRECTO
+            // GRÁFICO VOLUMEN MENSUAL - CON FILTRO POR AÑO
+            const chartAnoFilter = document.getElementById('filterChartAnio').value;
+            
+            // Filtrar datos por año si no es "All"
+            let dataForChart = data;
+            if (chartAnoFilter !== 'All') {
+                dataForChart = data.filter(r => {
+                    let d = parseDate(r['Fecha Anuncio']);
+                    return d && d.getFullYear().toString() === chartAnoFilter;
+                });
+            }
+            
             const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
             const mesData = new Array(12).fill(0);
             
             const seenForMonth = new Set();
-            data.forEach(r => {
+            dataForChart.forEach(r => {
                 const id = (r['Evento/Artista'] || "") + (r['Fecha Show'] || "");
                 if (!seenForMonth.has(id)) {
                     seenForMonth.add(id);
                     let d = parseDate(r['Fecha Anuncio']);
                     if(d && !isNaN(d.getTime())) {
-                        d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
                         const month = d.getMonth();
                         if(month >= 0 && month < 12) {
                             mesData[month]++;
@@ -413,6 +445,8 @@
                     }
                 }
             });
+
+            document.getElementById('chartLineTitle').innerText = chartAnoFilter === 'All' ? 'Volumen Mensual de Anuncios (Todos los años)' : `Volumen Mensual ${chartAnoFilter}`;
 
             if(chart2) chart2.destroy();
             const canvas2 = document.getElementById('chartLine');
