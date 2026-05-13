@@ -231,19 +231,45 @@
                     });
                 }
 
-                // 2. CARGA NOTICIAS (GID 1114214532) - REPARADO
+         // 2. CARGA NOTICIAS (Soporta saltos de línea y nuevas semanas agregadas arriba)
                 const newsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=1114214532&t=${new Date().getTime()}`;
                 const nRes = await fetch(newsUrl);
                 if (nRes.ok) {
                     const nCsv = await nRes.text();
-                    const nLines = nCsv.split(/\r?\n/).filter(l => l.trim() !== "");
-                    // Buscamos fila 3 (índice 2)
-                    if (nLines.length >= 3) {
-                        const nSep = nLines[0].includes(';') ? ';' : ',';
-                        const nVals = nLines[2].split(nSep).map(v => v.trim().replace(/"/g, ''));
-                        document.getElementById('newsTextB3').innerText = nVals[1] || "Sin noticias";
-                        document.getElementById('newsTextC3').innerText = nVals[2] || "Sin lanzamientos";
+                    
+                    // Mini-traductor para procesar los "Enters" (saltos de línea) dentro de las celdas de lanzamientos
+                    const nSep = nCsv.split('\n')[0].includes(';') ? ';' : ',';
+                    const nRows = [];
+                    let row = [], col = "", quote = false;
+                    for (let i = 0; i < nCsv.length; i++) {
+                        let c = nCsv[i], nc = nCsv[i+1];
+                        if (c === '"' && quote && nc === '"') { col += '"'; i++; continue; }
+                        if (c === '"') { quote = !quote; continue; }
+                        if (c === nSep && !quote) { row.push(col.trim()); col = ""; continue; }
+                        if (c === '\n' && !quote) { row.push(col.trim()); nRows.push(row); col = ""; row = []; continue; }
+                        if (c === '\r' && !quote) continue;
+                        col += c;
                     }
+                    if (col || row.length) { row.push(col.trim()); nRows.push(row); }
+
+                    let noticiaFinal = "Sin noticias";
+                    let lanzamientoFinal = "Sin lanzamientos";
+
+                    // Buscamos de arriba hacia abajo. Al encontrar los títulos "Noticias", leemos la fila de abajo.
+                    // Esto asegura que SIEMPRE tome tu semana más reciente, sin importar cuántas agregues.
+                    for (let i = 0; i < nRows.length; i++) {
+                        if (nRows[i][1] === "Noticias" || nRows[i][2] === "Lanzamientos") {
+                            if (nRows[i + 1]) { // La fila justo debajo del título
+                                noticiaFinal = nRows[i + 1][1] || "Sin noticias";
+                                lanzamientoFinal = nRows[i + 1][2] || "Sin lanzamientos";
+                            }
+                            break; // Encontramos la última semana, paramos de buscar.
+                        }
+                    }
+
+                    document.getElementById('newsTextB3').innerText = noticiaFinal;
+                    document.getElementById('newsTextC3').innerText = lanzamientoFinal;
+                }
                 }
 
                 initFilters();
