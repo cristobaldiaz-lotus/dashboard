@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LOTUS ANALYTICS</title>
     <link rel="icon" type="image/png" href="https://yt3.googleusercontent.com/JgHtt1rjwC2rIDd667ySQiK6xw9tcmUjZ_QNQb0f3t1el2Xfgl-hBG2dk0POKzEfLn7sfLJxg94=s900-c-k-c0x00ffffff-no-rj">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -12,8 +13,10 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
         body { background-color: #000; color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; }
         .card { background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 12px; }
+        
         .logo-bg { background: white; padding: 8px 16px; border-radius: 4px 0 0 4px; }
         .analytics-tag { background: #1a1a1a; padding: 8px 16px; border-radius: 0 4px 4px 0; border: 1px solid #333; border-left: none; }
+        
         .table-scroll { overflow-x: auto; font-size: 11px; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
@@ -21,6 +24,7 @@
         .btn-link:hover { border-color: #ff00ff; color: #ff00ff; }
         .news-content { white-space: pre-wrap; word-wrap: break-word; }
         select option { background: #0d0d0d; color: white; }
+        
         .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
         .login-card { background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 12px; padding: 40px; max-width: 400px; width: 100%; }
         .login-card input { background: #1a1a1a; border: 1px solid #333; color: white; padding: 12px; border-radius: 8px; width: 100%; margin: 15px 0; outline: none; transition: 0.3s; }
@@ -28,12 +32,14 @@
         .login-card button { background: #ff00ff; color: black; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; border: none; transition: 0.3s; margin-top: 10px; }
         .login-card button:hover { background: #e600e6; }
         .login-error { color: #ff6b6b; font-size: 12px; margin-top: 10px; text-align: center; }
-        .sync-indicator { display: flex; align-items: center; gap: 6px; font-size: 10px; text-zinc-500; }
+        
+        .sync-indicator { display: flex; align-items: center; gap: 6px; font-size: 10px; color: #71717a; }
         .sync-dot { width: 6px; height: 6px; border-radius: 50%; }
         .sync-dot.loading { background: #fbbf24; animation: pulse 1s infinite; }
         .sync-dot.success { background: #10b981; }
         .sync-dot.error { background: #ef4444; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
         .chart-wrapper { position: relative; overflow-x: auto; }
     </style>
 </head>
@@ -42,8 +48,10 @@
     <div id="loginScreen" class="login-container">
         <div class="login-card">
             <div class="text-center mb-8">
-                <img src="https://s3.us-east-2.amazonaws.com/bucket-vform-production/production/Institucion-41/Archivos/Logos/logo-1/Lotus_logo-1.png?1570651579" alt="Lotus" class="h-12 mx-auto mb-4">
-                <h2 class="text-2xl font-black tracking-[0.1em]">LOTUS ANALYTICS</h2>
+                <div class="bg-white inline-block px-6 py-4 rounded-xl mb-4 shadow-lg">
+                    <img src="https://s3.us-east-2.amazonaws.com/bucket-vform-production/production/Institucion-41/Archivos/Logos/logo-1/Lotus_logo-1.png?1570651579" alt="Lotus" class="h-10 mx-auto">
+                </div>
+                <h2 class="text-2xl font-black tracking-[0.3em] text-zinc-200">ANALYTICS</h2>
                 <p class="text-zinc-500 text-sm mt-2">Acceso Restringido</p>
             </div>
             <input type="password" id="passwordInput" placeholder="Ingresa la contraseña..." onkeypress="if(event.key === 'Enter') checkPassword()">
@@ -55,9 +63,14 @@
     <div id="dashboardScreen" class="hidden">
         <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
             <div class="flex items-center">
-                <div class="logo-bg"><img src="https://s3.us-east-2.amazonaws.com/bucket-vform-production/production/Institucion-41/Archivos/Logos/logo-1/Lotus_logo-1.png?1570651579" alt="Lotus" class="h-7"></div>
-                <div class="analytics-tag"><h1 class="text-sm font-black tracking-[0.4em] text-zinc-400">ANALYTICS</h1></div>
+                <div class="logo-bg">
+                    <img src="https://s3.us-east-2.amazonaws.com/bucket-vform-production/production/Institucion-41/Archivos/Logos/logo-1/Lotus_logo-1.png?1570651579" alt="Lotus" class="h-7">
+                </div>
+                <div class="analytics-tag">
+                    <h1 class="text-sm font-black tracking-[0.4em] text-zinc-400">ANALYTICS</h1>
+                </div>
             </div>
+            
             <div class="flex items-center gap-4">
                 <div class="sync-indicator">
                     <div id="syncDot" class="sync-dot loading"></div>
@@ -189,17 +202,15 @@
             text.innerText = status === 'loading' ? 'Sincronizando...' : status === 'success' ? 'Sincronizado' : 'Error';
         }
 
+        // Lógica Fuerte de Parseo de Fechas
         function parseDate(val) {
             if (!val) return null;
-            // Si viene de Google Sheets como número de serie
             if (!isNaN(val) && parseFloat(val) > 30000) {
                 return new Date(Math.round((val - 25569) * 86400 * 1000));
             }
-            // Si viene como string
             const s = String(val).trim();
             const parts = s.split(/[-\/]/);
             if (parts.length === 3) {
-                // Asumimos DD-MM-YYYY
                 const d = parseInt(parts[0]);
                 const m = parseInt(parts[1]) - 1;
                 const y = parts[2].length === 2 ? 2000 + parseInt(parts[2]) : parseInt(parts[2]);
@@ -209,10 +220,16 @@
             return isNaN(d.getTime()) ? null : d;
         }
 
+        function fDate(val) {
+            const d = parseDate(val);
+            if (!d) return val || '-';
+            return d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
         async function loadFromGoogleSheet() {
             setSyncStatus('loading');
             try {
-                // 1. CARGA ANUNCIOS (GID 0)
+                // 1. CARGA ANUNCIOS (Hoja 1 - GID 0)
                 const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=0&t=${new Date().getTime()}`;
                 const response = await fetch(url);
                 const csv = await response.text();
@@ -231,18 +248,26 @@
                     });
                 }
 
-                // 2. CARGA NOTICIAS (GID 1114214532) - REPARADO
-                const newsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=1114214532&t=${new Date().getTime()}`;
+                // 2. CARGA NOTICIAS (Búsqueda por Nombre de Hoja "Noticias" en vez de GID para evitar cruces)
+                const newsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Noticias&t=${new Date().getTime()}`;
                 const nRes = await fetch(newsUrl);
                 if (nRes.ok) {
                     const nCsv = await nRes.text();
-                    const nLines = nCsv.split(/\r?\n/).filter(l => l.trim() !== "");
-                    // Buscamos fila 3 (índice 2)
-                    if (nLines.length >= 3) {
-                        const nSep = nLines[0].includes(';') ? ';' : ',';
-                        const nVals = nLines[2].split(nSep).map(v => v.trim().replace(/"/g, ''));
-                        document.getElementById('newsTextB3').innerText = nVals[1] || "Sin noticias";
-                        document.getElementById('newsTextC3').innerText = nVals[2] || "Sin lanzamientos";
+                    if (!nCsv.includes('<html')) { // Asegura que no devuelve error de Google
+                        const nLines = nCsv.split(/\r?\n/).filter(l => l.trim() !== "");
+                        if (nLines.length > 1) {
+                            const nSep = nLines[0].includes(';') ? ';' : ',';
+                            // Leemos la última fila (para asegurar que agarre el dato si tienes encabezados)
+                            const nVals = nLines[nLines.length - 1].split(nSep).map(v => v.trim().replace(/"/g, ''));
+                            
+                            // Si en Noticias las columnas son B (Noticia) y C (Lanzamiento):
+                            // Ajustamos por si la hoja solo tiene 2 columnas en total (A y B)
+                            const noticia = nVals.length > 2 ? nVals[1] : nVals[0];
+                            const lanzamiento = nVals.length > 2 ? nVals[2] : nVals[1];
+
+                            document.getElementById('newsTextB3').innerText = noticia || "Sin noticias";
+                            document.getElementById('newsTextC3').innerText = lanzamiento || "Sin lanzamientos";
+                        }
                     }
                 }
 
@@ -259,12 +284,6 @@
             loadFromGoogleSheet();
             if (syncTimer) clearInterval(syncTimer);
             syncTimer = setInterval(loadFromGoogleSheet, 30000);
-        }
-
-        function fDate(val) {
-            const d = parseDate(val);
-            if (!d) return val || '-';
-            return d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
         function initFilters() {
@@ -303,9 +322,12 @@
             document.getElementById('kpiTotal').innerText = data.length;
             document.getElementById('kpiSoldOut').innerText = data.filter(r => (r['Status Venta'] || "").toLowerCase().includes('sold out')).length;
 
+            // TABLA
             document.getElementById('tableBody').innerHTML = data.map(r => {
                 const dcto = r['Dcto'] ? r['Dcto'] + '%' : '-';
                 const ausp = r['Auspicios'] || r['Auspiciador'] || '-';
+                const promo = `${dcto} / ${ausp}`;
+                
                 return `
                 <tr class="border-b border-zinc-900/50 hover:bg-zinc-900/50">
                     <td class="p-4 font-bold text-white">${r['Evento/Artista'] || '-'}</td>
@@ -315,12 +337,12 @@
                     <td class="p-4 text-zinc-200">${r['Productora'] || '-'}</td>
                     <td class="p-4 uppercase">PV: ${fDate(r['Fecha Preventa'])}<br>VG: ${fDate(r['Fecha Venta General'])}</td>
                     <td class="p-4 italic font-bold">${r['Status Venta'] || 'DISPONIBLE'}</td>
-                    <td class="p-4 text-zinc-400 uppercase font-medium">${dcto} / ${ausp}</td>
+                    <td class="p-4 text-zinc-400 uppercase font-medium">${promo}</td>
                     <td class="p-4 text-center"><a href="${r['Landing Page'] || r['Link'] || '#'}" target="_blank" class="text-fuchsia-500 text-lg">↗</a></td>
                 </tr>`;
             }).join('');
 
-            // CHART STACKED
+            // GRÁFICO RECINTOS
             const recLabels = [...new Set(data.map(r => r['Recinto']).filter(Boolean))].sort();
             const prodList = [...new Set(data.map(r => r._productoraUnica))];
             const colors = ['#ff00ff', '#ffffff', '#444444', '#888888', '#f0abfc', '#701a75', '#a1a1aa'];
@@ -337,57 +359,75 @@
                     }))
                 },
                 options: { 
-                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    indexAxis: 'y', 
+                    responsive: true, 
+                    maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    scales: { x: { stacked: true }, y: { stacked: true } }
+                    scales: { 
+                        x: { stacked: true }, 
+                        y: { stacked: true, ticks: { font: { size: 10 } } } 
+                    }
                 }
             });
 
-            // CHART LINE (Volumen)
+            // GRÁFICO VOLUMEN MENSUAL
             const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
             const mesData = new Array(12).fill(0);
             
+            // Aquí el filtro de año actúa sobre los datos del gráfico
             const chartDataFiltered = data.filter(r => {
                 const d = parseDate(r['Fecha Anuncio']);
                 return chartAnoFilter === 'All' || (d && d.getFullYear().toString() === chartAnoFilter);
             });
 
-            const seenMonth = new Set();
+            const seenForMonth = new Set();
             chartDataFiltered.forEach(r => {
                 const id = (r['Evento/Artista'] || "") + (r['Fecha Show'] || "");
-                if(!seenMonth.has(id)) {
-                    seenMonth.add(id);
-                    const d = parseDate(r['Fecha Anuncio']);
-                    if(d) mesData[d.getMonth()]++;
+                if (!seenForMonth.has(id)) {
+                    seenForMonth.add(id);
+                    let d = parseDate(r['Fecha Anuncio']);
+                    if(d && !isNaN(d.getTime())) {
+                        const month = d.getMonth();
+                        if(month >= 0 && month < 12) mesData[month]++;
+                    }
                 }
             });
 
             document.getElementById('chartLineTitle').innerText = chartAnoFilter === 'All' ? 'Volumen Mensual (Todos los años)' : `Volumen Mensual ${chartAnoFilter}`;
 
             if(chart2) chart2.destroy();
-            chart2 = new Chart(document.getElementById('chartLine'), {
-                type: 'line',
-                data: { 
-                    labels: meses, 
-                    datasets: [{ 
-                        data: mesData, borderColor: '#ff00ff', tension: 0.4, fill: true, 
-                        backgroundColor: 'rgba(255, 0, 255, 0.05)', borderWidth: 3 
-                    }] 
-                },
-                options: { 
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-                }
-            });
+            const canvas2 = document.getElementById('chartLine');
+            if(canvas2) {
+                chart2 = new Chart(canvas2, {
+                    type: 'line',
+                    data: { 
+                        labels: meses, 
+                        datasets: [{ 
+                            data: mesData, borderColor: '#ff00ff', tension: 0.4, fill: true, 
+                            backgroundColor: 'rgba(255, 0, 255, 0.1)', borderWidth: 3,
+                            pointBackgroundColor: '#ff00ff', pointRadius: 5
+                        }] 
+                    },
+                    options: { 
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { 
+                            y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                            x: { ticks: { font: { size: 11 } } }
+                        }
+                    }
+                });
+            }
 
-            // RECENT LIST
-            const unique = data.filter((r, i, self) => 
-                i === self.findIndex((t) => t['Evento/Artista'] === r['Evento/Artista'] && t['Fecha Show'] === r['Fecha Show'])
-            );
+            // LISTA LATERAL
+            const seen = new Set();
+            const unique = data.filter(r => {
+                const id = (r['Evento/Artista'] || "") + (r['Fecha Show'] || "");
+                if(seen.has(id)) return false; seen.add(id); return true;
+            });
             document.getElementById('recentList').innerHTML = unique.slice(0, 8).map(r => `
                 <div class="border-l-2 border-fuchsia-600 pl-4 py-4 bg-zinc-900/40 rounded-r-lg mb-3">
-                    <p class="text-[9px] font-black text-fuchsia-500 uppercase">${fDate(r['Fecha Anuncio'])} | ${r['Productora']}</p>
+                    <p class="text-[9px] font-black text-fuchsia-500 uppercase">ANUNCIO: ${fDate(r['Fecha Anuncio'])} | ${r['Productora']}</p>
                     <p class="text-sm font-black text-white leading-tight">${r['Evento/Artista']}</p>
                     <p class="text-[10px] text-zinc-500 uppercase">${r['Recinto'] || '-'}</p>
                     <div class="flex items-center gap-2 mt-2">
