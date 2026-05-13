@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LOTUS ANALYTICS</title>
     <link rel="icon" type="image/png" href="https://yt3.googleusercontent.com/JgHtt1rjwC2rIDd667ySQiK6xw9tcmUjZ_QNQb0f3t1el2Xfgl-hBG2dk0POKzEfLn7sfLJxg94=s900-c-k-c0x00ffffff-no-rj">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -13,10 +12,8 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
         body { background-color: #000; color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; }
         .card { background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 12px; }
-        
         .logo-bg { background: white; padding: 8px 16px; border-radius: 4px 0 0 4px; }
         .analytics-tag { background: #1a1a1a; padding: 8px 16px; border-radius: 0 4px 4px 0; border: 1px solid #333; border-left: none; }
-        
         .table-scroll { overflow-x: auto; font-size: 11px; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
@@ -24,7 +21,6 @@
         .btn-link:hover { border-color: #ff00ff; color: #ff00ff; }
         .news-content { white-space: pre-wrap; word-wrap: break-word; }
         select option { background: #0d0d0d; color: white; }
-        
         .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
         .login-card { background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 12px; padding: 40px; max-width: 400px; width: 100%; }
         .login-card input { background: #1a1a1a; border: 1px solid #333; color: white; padding: 12px; border-radius: 8px; width: 100%; margin: 15px 0; outline: none; transition: 0.3s; }
@@ -32,20 +28,17 @@
         .login-card button { background: #ff00ff; color: black; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; border: none; transition: 0.3s; margin-top: 10px; }
         .login-card button:hover { background: #e600e6; }
         .login-error { color: #ff6b6b; font-size: 12px; margin-top: 10px; text-align: center; }
-        
         .sync-indicator { display: flex; align-items: center; gap: 6px; font-size: 10px; text-zinc-500; }
         .sync-dot { width: 6px; height: 6px; border-radius: 50%; }
         .sync-dot.loading { background: #fbbf24; animation: pulse 1s infinite; }
         .sync-dot.success { background: #10b981; }
         .sync-dot.error { background: #ef4444; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        
         .chart-wrapper { position: relative; overflow-x: auto; }
     </style>
 </head>
 <body class="p-4 lg:p-8">
 
-    <!-- LOGIN SCREEN -->
     <div id="loginScreen" class="login-container">
         <div class="login-card">
             <div class="text-center mb-8">
@@ -59,30 +52,17 @@
         </div>
     </div>
 
-    <!-- DASHBOARD (HIDDEN UNTIL LOGIN) -->
     <div id="dashboardScreen" class="hidden">
         <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
             <div class="flex items-center">
-                <div class="logo-bg">
-                    <img src="https://s3.us-east-2.amazonaws.com/bucket-vform-production/production/Institucion-41/Archivos/Logos/logo-1/Lotus_logo-1.png?1570651579" alt="Lotus" class="h-7">
-                </div>
-                <div class="analytics-tag">
-                    <h1 class="text-sm font-black tracking-[0.4em] text-zinc-400">ANALYTICS</h1>
-                </div>
+                <div class="logo-bg"><img src="https://s3.us-east-2.amazonaws.com/bucket-vform-production/production/Institucion-41/Archivos/Logos/logo-1/Lotus_logo-1.png?1570651579" alt="Lotus" class="h-7"></div>
+                <div class="analytics-tag"><h1 class="text-sm font-black tracking-[0.4em] text-zinc-400">ANALYTICS</h1></div>
             </div>
-            
             <div class="flex items-center gap-4">
                 <div class="sync-indicator">
                     <div id="syncDot" class="sync-dot loading"></div>
                     <span id="syncText">Sincronizando...</span>
                 </div>
-                <label class="cursor-pointer group">
-                    <input type="file" id="fileInput" class="hidden" onchange="handleFile(event)">
-                    <div class="border border-zinc-800 px-6 py-2 rounded-full group-hover:border-fuchsia-500 transition-all flex items-center gap-3">
-                        <span id="fileName" class="text-[10px] text-zinc-400 font-mono uppercase tracking-widest">O Cargar Archivo</span>
-                        <div class="w-2 h-2 rounded-full bg-fuchsia-600 animate-pulse"></div>
-                    </div>
-                </label>
                 <button onclick="logout()" class="border border-zinc-800 px-4 py-2 rounded-full hover:border-fuchsia-500 transition-all text-[10px] text-zinc-400 font-mono uppercase tracking-widest">Salir</button>
             </div>
         </header>
@@ -155,7 +135,7 @@
                         <input type="text" id="search" onkeyup="applyFilters()" placeholder="Buscar artista..." class="bg-zinc-900 border border-zinc-800 rounded-md px-3 py-1 text-[10px] text-white outline-none focus:border-fuchsia-500">
                     </div>
                     <div class="table-scroll max-h-[500px]">
-                        <table class="w-full text-left">
+                        <table class="w-full text-left text-xs">
                             <thead>
                                 <tr class="text-zinc-600 border-b border-zinc-800 uppercase text-[9px] font-black">
                                     <th class="p-4">Artista</th><th class="p-4">Anuncio</th><th class="p-4">Show</th><th class="p-4">Recinto</th><th class="p-4">Productora</th><th class="p-4">Ventas (PV/VG)</th><th class="p-4">Status</th><th class="p-4">Dcto / Auspicios</th><th class="p-4">Link</th>
@@ -169,7 +149,7 @@
         </div>
     </div>
 
-  <script>
+    <script>
         const CORRECT_PASSWORD = 'flordeloto2026';
         const SHEET_ID = '1FfZenRVepS2mG-jvpG-WOyWSvlYtwLaUjD_tHW94r00';
         
@@ -177,7 +157,6 @@
         let chart1, chart2;
         let syncTimer;
 
-        // --- LOGIN ---
         function checkPassword() {
             const input = document.getElementById('passwordInput').value;
             if (input === CORRECT_PASSWORD) {
@@ -210,33 +189,30 @@
             text.innerText = status === 'loading' ? 'Sincronizando...' : status === 'success' ? 'Sincronizado' : 'Error';
         }
 
-        // Parsear fechas en formato DD-MM-YYYY o DD/MM/YYYY
-        function parseDate(dateStr) {
-            if (!dateStr) return null;
-            
-            // Si es número (Excel)
-            if (!isNaN(dateStr) && dateStr.toString().length > 4) {
-                return new Date(Math.round((dateStr - 25569) * 86400 * 1000));
+        function parseDate(val) {
+            if (!val) return null;
+            // Si viene de Google Sheets como número de serie
+            if (!isNaN(val) && parseFloat(val) > 30000) {
+                return new Date(Math.round((val - 25569) * 86400 * 1000));
             }
-            
-            // Si es string DD-MM-YYYY o DD/MM/YYYY
-            if (typeof dateStr === 'string') {
-                const parts = dateStr.split(/[-\/]/);
-                if (parts.length === 3) {
-                    const day = parseInt(parts[0]);
-                    const month = parseInt(parts[1]) - 1; // Mes es 0-indexed en JS
-                    const year = parseInt(parts[2]);
-                    return new Date(year, month, day);
-                }
+            // Si viene como string
+            const s = String(val).trim();
+            const parts = s.split(/[-\/]/);
+            if (parts.length === 3) {
+                // Asumimos DD-MM-YYYY
+                const d = parseInt(parts[0]);
+                const m = parseInt(parts[1]) - 1;
+                const y = parts[2].length === 2 ? 2000 + parseInt(parts[2]) : parseInt(parts[2]);
+                return new Date(y, m, d);
             }
-            
-            return new Date(dateStr);
+            const d = new Date(val);
+            return isNaN(d.getTime()) ? null : d;
         }
 
         async function loadFromGoogleSheet() {
             setSyncStatus('loading');
             try {
-                // 1. CARGA ANUNCIOS (Hoja 1 - GID 0)
+                // 1. CARGA ANUNCIOS (GID 0)
                 const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=0&t=${new Date().getTime()}`;
                 const response = await fetch(url);
                 const csv = await response.text();
@@ -255,25 +231,18 @@
                     });
                 }
 
-                // 2. CARGA NOTICIAS (Hoja 2 - GID 1114214532, Lee B3 y C3)
+                // 2. CARGA NOTICIAS (GID 1114214532) - REPARADO
                 const newsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=1114214532&t=${new Date().getTime()}`;
                 const nRes = await fetch(newsUrl);
                 if (nRes.ok) {
                     const nCsv = await nRes.text();
                     const nLines = nCsv.split(/\r?\n/).filter(l => l.trim() !== "");
-                    
-                    if (nLines.length > 2) {  // Al menos 3 líneas (encabezado + 2 filas de datos)
+                    // Buscamos fila 3 (índice 2)
+                    if (nLines.length >= 3) {
                         const nSep = nLines[0].includes(';') ? ';' : ',';
-                        
-                        // FILA 3 (índice 2 - contando desde 0)
                         const nVals = nLines[2].split(nSep).map(v => v.trim().replace(/"/g, ''));
-                        
-                        // Columna B (índice 1) y Columna C (índice 2)
-                        const newsValue = nVals[1] || "Sin noticias";
-                        const releaseValue = nVals[2] || "Sin lanzamientos";
-                        
-                        document.getElementById('newsTextB3').innerText = newsValue;
-                        document.getElementById('newsTextC3').innerText = releaseValue;
+                        document.getElementById('newsTextB3').innerText = nVals[1] || "Sin noticias";
+                        document.getElementById('newsTextC3').innerText = nVals[2] || "Sin lanzamientos";
                     }
                 }
 
@@ -293,40 +262,9 @@
         }
 
         function fDate(val) {
-            if (!val) return '-';
-            let d = parseDate(val);
-            if (!d || isNaN(d.getTime())) return val || '-';
-            return d.toLocaleDateString('es-CL');
-        }
-
-        function handleFile(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            document.getElementById('fileName').innerText = file.name;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const wb = XLSX.read(data, { type: 'array' });
-                const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                
-                rawData = [];
-                json.forEach(row => {
-                    const productoras = String(row['Productora'] || 'TBA').split('+').map(s => s.trim());
-                    productoras.forEach(p => {
-                        rawData.push({ ...row, _productoraUnica: p });
-                    });
-                });
-
-                try {
-                    const wsNews = wb.Sheets["Noticias"] || wb.Sheets[wb.SheetNames[1]];
-                    document.getElementById('newsTextB3').innerText = wsNews['B3']?.v || "Sin noticias";
-                    document.getElementById('newsTextC3').innerText = wsNews['C3']?.v || "Sin lanzamientos";
-                } catch(err) {}
-                
-                initFilters();
-                applyFilters();
-            };
-            reader.readAsArrayBuffer(file);
+            const d = parseDate(val);
+            if (!d) return val || '-';
+            return d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
         function initFilters() {
@@ -346,11 +284,10 @@
             const mF = document.getElementById('filterMes').value;
             const aF = document.getElementById('filterAnio').value;
             const sF = document.getElementById('search').value.toLowerCase();
+            const chartAF = document.getElementById('filterChartAnio').value;
 
             const filtered = rawData.filter(r => {
-                let d = parseDate(r['Fecha Anuncio']);
-                if(d) d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
-                
+                const d = parseDate(r['Fecha Anuncio']);
                 const matchP = pF === 'All' || r._productoraUnica === pF;
                 const matchR = rF === 'All' || r['Recinto'] === rF;
                 const matchM = mF === 'All' || (d && d.getMonth().toString() === mF);
@@ -358,34 +295,32 @@
                 const matchS = (r['Evento/Artista'] || "").toLowerCase().includes(sF);
                 return matchP && matchR && matchM && matchA && matchS;
             });
-            updateUI(filtered);
+
+            updateUI(filtered, chartAF);
         }
 
-        function updateUI(data) {
+        function updateUI(data, chartAnoFilter) {
             document.getElementById('kpiTotal').innerText = data.length;
             document.getElementById('kpiSoldOut').innerText = data.filter(r => (r['Status Venta'] || "").toLowerCase().includes('sold out')).length;
 
-            // TABLA
             document.getElementById('tableBody').innerHTML = data.map(r => {
                 const dcto = r['Dcto'] ? r['Dcto'] + '%' : '-';
                 const ausp = r['Auspicios'] || r['Auspiciador'] || '-';
-                const promo = `${dcto} / ${ausp}`;
-                
                 return `
                 <tr class="border-b border-zinc-900/50 hover:bg-zinc-900/50">
-                    <td class="p-4 font-bold text-white text-xs">${r['Evento/Artista'] || '-'}</td>
-                    <td class="p-4 text-zinc-500 text-[10px]">${fDate(r['Fecha Anuncio'])}</td>
+                    <td class="p-4 font-bold text-white">${r['Evento/Artista'] || '-'}</td>
+                    <td class="p-4 text-zinc-500">${fDate(r['Fecha Anuncio'])}</td>
                     <td class="p-4 text-fuchsia-400 font-bold">${fDate(r['Fecha Show'])}</td>
                     <td class="p-4 text-zinc-400">${r['Recinto'] || '-'}</td>
                     <td class="p-4 text-zinc-200">${r['Productora'] || '-'}</td>
-                    <td class="p-4 text-[10px] text-zinc-500 uppercase">PV: ${fDate(r['Fecha Preventa'])}<br>VG: ${fDate(r['Fecha Venta General'])}</td>
-                    <td class="p-4 italic text-[10px] text-zinc-400 font-bold">${r['Status Venta'] || 'DISPONIBLE'}</td>
-                    <td class="p-4 text-zinc-400 text-[9px] uppercase font-medium">${promo}</td>
+                    <td class="p-4 uppercase">PV: ${fDate(r['Fecha Preventa'])}<br>VG: ${fDate(r['Fecha Venta General'])}</td>
+                    <td class="p-4 italic font-bold">${r['Status Venta'] || 'DISPONIBLE'}</td>
+                    <td class="p-4 text-zinc-400 uppercase font-medium">${dcto} / ${ausp}</td>
                     <td class="p-4 text-center"><a href="${r['Landing Page'] || r['Link'] || '#'}" target="_blank" class="text-fuchsia-500 text-lg">↗</a></td>
                 </tr>`;
             }).join('');
 
-            // GRÁFICO RECINTOS
+            // CHART STACKED
             const recLabels = [...new Set(data.map(r => r['Recinto']).filter(Boolean))].sort();
             const prodList = [...new Set(data.map(r => r._productoraUnica))];
             const colors = ['#ff00ff', '#ffffff', '#444444', '#888888', '#f0abfc', '#701a75', '#a1a1aa'];
@@ -402,102 +337,57 @@
                     }))
                 },
                 options: { 
-                    indexAxis: 'y', 
-                    responsive: true, 
-                    maintainAspectRatio: false,
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    scales: { 
-                        x: { stacked: true }, 
-                        y: { 
-                            stacked: true,
-                            ticks: { font: { size: 10 } }
-                        } 
-                    }
+                    scales: { x: { stacked: true }, y: { stacked: true } }
                 }
             });
 
-            // GRÁFICO VOLUMEN MENSUAL - CON FILTRO POR AÑO
-            const chartAnoFilter = document.getElementById('filterChartAnio').value;
-            
-            // Filtrar datos por año si no es "All"
-            let dataForChart = data;
-            if (chartAnoFilter !== 'All') {
-                dataForChart = data.filter(r => {
-                    let d = parseDate(r['Fecha Anuncio']);
-                    return d && d.getFullYear().toString() === chartAnoFilter;
-                });
-            }
-            
+            // CHART LINE (Volumen)
             const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
             const mesData = new Array(12).fill(0);
             
-            const seenForMonth = new Set();
-            dataForChart.forEach(r => {
+            const chartDataFiltered = data.filter(r => {
+                const d = parseDate(r['Fecha Anuncio']);
+                return chartAnoFilter === 'All' || (d && d.getFullYear().toString() === chartAnoFilter);
+            });
+
+            const seenMonth = new Set();
+            chartDataFiltered.forEach(r => {
                 const id = (r['Evento/Artista'] || "") + (r['Fecha Show'] || "");
-                if (!seenForMonth.has(id)) {
-                    seenForMonth.add(id);
-                    let d = parseDate(r['Fecha Anuncio']);
-                    if(d && !isNaN(d.getTime())) {
-                        const month = d.getMonth();
-                        if(month >= 0 && month < 12) {
-                            mesData[month]++;
-                        }
-                    }
+                if(!seenMonth.has(id)) {
+                    seenMonth.add(id);
+                    const d = parseDate(r['Fecha Anuncio']);
+                    if(d) mesData[d.getMonth()]++;
                 }
             });
 
-            document.getElementById('chartLineTitle').innerText = chartAnoFilter === 'All' ? 'Volumen Mensual de Anuncios (Todos los años)' : `Volumen Mensual ${chartAnoFilter}`;
+            document.getElementById('chartLineTitle').innerText = chartAnoFilter === 'All' ? 'Volumen Mensual (Todos los años)' : `Volumen Mensual ${chartAnoFilter}`;
 
             if(chart2) chart2.destroy();
-            const canvas2 = document.getElementById('chartLine');
-            if(canvas2) {
-                chart2 = new Chart(canvas2, {
-                    type: 'line',
-                    data: { 
-                        labels: meses, 
-                        datasets: [{ 
-                            data: mesData, 
-                            borderColor: '#ff00ff', 
-                            tension: 0.4, 
-                            fill: true, 
-                            backgroundColor: 'rgba(255, 0, 255, 0.1)',
-                            borderWidth: 3,
-                            pointBackgroundColor: '#ff00ff',
-                            pointRadius: 5,
-                            pointBorderWidth: 2,
-                            pointBorderColor: '#000'
-                        }] 
-                    },
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: { 
-                            y: { 
-                                beginAtZero: true, 
-                                ticks: { 
-                                    stepSize: 1,
-                                    callback: function(value) { return value; }
-                                },
-                                max: Math.max(...mesData) + 1
-                            },
-                            x: {
-                                ticks: { font: { size: 11 } }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // LISTA LATERAL
-            const seen = new Set();
-            const unique = data.filter(r => {
-                const id = (r['Evento/Artista'] || "") + (r['Fecha Show'] || "");
-                if(seen.has(id)) return false; seen.add(id); return true;
+            chart2 = new Chart(document.getElementById('chartLine'), {
+                type: 'line',
+                data: { 
+                    labels: meses, 
+                    datasets: [{ 
+                        data: mesData, borderColor: '#ff00ff', tension: 0.4, fill: true, 
+                        backgroundColor: 'rgba(255, 0, 255, 0.05)', borderWidth: 3 
+                    }] 
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
             });
+
+            // RECENT LIST
+            const unique = data.filter((r, i, self) => 
+                i === self.findIndex((t) => t['Evento/Artista'] === r['Evento/Artista'] && t['Fecha Show'] === r['Fecha Show'])
+            );
             document.getElementById('recentList').innerHTML = unique.slice(0, 8).map(r => `
                 <div class="border-l-2 border-fuchsia-600 pl-4 py-4 bg-zinc-900/40 rounded-r-lg mb-3">
-                    <p class="text-[9px] font-black text-fuchsia-500 uppercase">ANUNCIO: ${fDate(r['Fecha Anuncio'])} | ${r['Productora']}</p>
+                    <p class="text-[9px] font-black text-fuchsia-500 uppercase">${fDate(r['Fecha Anuncio'])} | ${r['Productora']}</p>
                     <p class="text-sm font-black text-white leading-tight">${r['Evento/Artista']}</p>
                     <p class="text-[10px] text-zinc-500 uppercase">${r['Recinto'] || '-'}</p>
                     <div class="flex items-center gap-2 mt-2">
