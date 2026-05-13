@@ -9,7 +9,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
         body { background-color: #000; color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; }
@@ -151,7 +150,7 @@
                         <table class="w-full text-left">
                             <thead>
                                 <tr class="text-zinc-600 border-b border-zinc-800 uppercase text-[9px] font-black">
-                                    <th class="p-4">Artista</th><th class="p-4">Anuncio</th><th class="p-4">Show</th><th class="p-4">Recinto</th><th class="p-4">Productora</th><th class="p-4">Ventas (PV/VG)</th><th class="p-4">Status</th><th class="p-4">Promoción</th><th class="p-4">Link</th>
+                                    <th class="p-4">Artista</th><th class="p-4">Anuncio</th><th class="p-4">Show</th><th class="p-4">Recinto</th><th class="p-4">Productora</th><th class="p-4">Ventas (PV/VG)</th><th class="p-4">Status</th><th class="p-4">Dcto / Auspicios</th><th class="p-4">Link</th>
                                 </tr>
                             </thead>
                             <tbody id="tableBody"></tbody>
@@ -225,17 +224,22 @@
                     });
                 }
 
-                // 2. CARGA NOTICIAS (Hoja 2 - GID 1114214532) - REFORZADO
+                // 2. CARGA NOTICIAS (Hoja 2 - Primera fila con datos)
                 const newsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=1114214532&t=${new Date().getTime()}`;
                 const nRes = await fetch(newsUrl);
                 if (nRes.ok) {
                     const nCsv = await nRes.text();
                     const nLines = nCsv.split(/\r?\n/).filter(l => l.trim() !== "");
-                    if (nLines.length > 1) {
-                        const nVals = nLines[1].split(separator).map(v => v.trim().replace(/"/g, ''));
-                        // Forzamos la lectura de columnas B (índice 1) y C (índice 2)
-                        document.getElementById('newsTextB3').innerText = nVals[1] || "Sin noticias";
-                        document.getElementById('newsTextC3').innerText = nVals[2] || "Sin lanzamientos";
+                    if (nLines.length > 0) {
+                        const nHeaders = nLines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
+                        const nVals = nLines[0].split(separator).map(v => v.trim().replace(/"/g, ''));
+                        
+                        // Busca las columnas B y C (índices 1 y 2)
+                        const newsValue = nVals[1] || "Sin noticias";
+                        const releaseValue = nVals[2] || "Sin lanzamientos";
+                        
+                        document.getElementById('newsTextB3').innerText = newsValue;
+                        document.getElementById('newsTextC3').innerText = releaseValue;
                     }
                 }
 
@@ -259,6 +263,36 @@
             let d = new Date(Math.round((val - 25569) * 86400 * 1000));
             d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
             return d.toLocaleDateString('es-CL');
+        }
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            document.getElementById('fileName').innerText = file.name;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const wb = XLSX.read(data, { type: 'array' });
+                const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                
+                rawData = [];
+                json.forEach(row => {
+                    const productoras = String(row['Productora'] || 'TBA').split('+').map(s => s.trim());
+                    productoras.forEach(p => {
+                        rawData.push({ ...row, _productoraUnica: p });
+                    });
+                });
+
+                try {
+                    const wsNews = wb.Sheets["Noticias"] || wb.Sheets[wb.SheetNames[1]];
+                    document.getElementById('newsTextB3').innerText = wsNews['B1']?.v || "Sin noticias";
+                    document.getElementById('newsTextC3').innerText = wsNews['C1']?.v || "Sin lanzamientos";
+                } catch(err) {}
+                
+                initFilters();
+                applyFilters();
+            };
+            reader.readAsArrayBuffer(file);
         }
 
         function initFilters() {
@@ -297,10 +331,10 @@
             document.getElementById('kpiTotal').innerText = data.length;
             document.getElementById('kpiSoldOut').innerText = data.filter(r => (r['Status Venta'] || "").toLowerCase().includes('sold out')).length;
 
-            // TABLA - DCTO / AUSPICIOS Y LINK CORREGIDOS
+            // TABLA - DCTO / AUSPICIOS CORREGIDOS
             document.getElementById('tableBody').innerHTML = data.map(r => {
                 const dcto = r['Dcto'] ? r['Dcto'] + '%' : '-';
-                const ausp = r['Auspiciador'] || r['Auspicios'] || '-';
+                const ausp = r['Auspicios'] || r['Auspiciador'] || '-';
                 const promo = `${dcto} / ${ausp}`;
                 
                 return `
@@ -340,19 +374,28 @@
                 }
             });
 
-            // GRÁFICO VOLUMEN MENSUAL (INALTERABLE)
+            // GRÁFICO VOLUMEN MENSUAL - CORREGIDO PARA EVITAR DUPLICADOS
             const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
             const mesData = new Array(12).fill(0);
+            
+            // Usa Set para evitar contar duplicados
+            const seenForMonth = new Set();
             data.forEach(r => {
-                let rawD = r['Fecha Anuncio'];
-                if(rawD && !isNaN(rawD)) {
-                    let d = new Date(Math.round((rawD - 25569) * 86400 * 1000));
-                    mesData[d.getMonth()]++;
+                const id = (r['Evento/Artista'] || "") + (r['Fecha Show'] || "");
+                if (!seenForMonth.has(id)) {
+                    seenForMonth.add(id);
+                    let rawD = r['Fecha Anuncio'];
+                    if(rawD && !isNaN(rawD)) {
+                        let d = new Date(Math.round((rawD - 25569) * 86400 * 1000));
+                        d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+                        mesData[d.getMonth()]++;
+                    }
                 }
             });
 
+            document.getElementById('chartLineTitle').innerText = 'Volumen Mensual de Anuncios';
+
             if(chart2) chart2.destroy();
-            // Busca 'chartLine' como ID prioritario según tu código original
             const canvas2 = document.getElementById('chartLine');
             if(canvas2) {
                 chart2 = new Chart(canvas2, {
@@ -365,14 +408,18 @@
                             tension: 0.4, 
                             fill: true, 
                             backgroundColor: 'rgba(255, 0, 255, 0.05)',
-                            borderWidth: 3
+                            borderWidth: 3,
+                            pointBackgroundColor: '#ff00ff',
+                            pointRadius: 4
                         }] 
                     },
                     options: { 
                         responsive: true, 
                         maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
-                        scales: { y: { beginAtZero: true } }
+                        scales: { 
+                            y: { beginAtZero: true, ticks: { stepSize: 1 } } 
+                        }
                     }
                 });
             }
