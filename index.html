@@ -23,49 +23,60 @@
         .btn-link { background: #1a1a1a; border: 1px solid #333; transition: 0.3s; display: inline-flex; align-items: center; justify-content: center; }
         .btn-link:hover { border-color: #ff00ff; color: #ff00ff; }
         .news-content { white-space: pre-wrap; word-wrap: break-word; }
+        select option { background: #0d0d0d; color: white; }
         
-        /* LOGIN ESTILOS */
-        .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); }
-        .login-card { background: #0d0d0d; border: 1px solid #222; border-radius: 20px; padding: 50px; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
-        .login-logo-box { background: white; display: inline-block; padding: 25px 40px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 10px 15px -3px rgba(255, 255, 255, 0.1); }
-        .login-card input { background: #1a1a1a; border: 1px solid #333; color: white; padding: 14px; border-radius: 10px; width: 100%; margin: 20px 0; outline: none; transition: 0.3s; text-align: center; }
-        .login-card input:focus { border-color: #ff00ff; box-shadow: 0 0 0 2px rgba(255, 0, 255, 0.2); }
-        .login-card button { background: #ff00ff; color: black; padding: 14px; border-radius: 10px; width: 100%; font-weight: 900; cursor: pointer; border: none; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; }
-        .login-card button:hover { background: #e600e6; transform: translateY(-1px); }
+        .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .login-card { background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 12px; padding: 40px; max-width: 400px; width: 100%; }
+        .login-card input { background: #1a1a1a; border: 1px solid #333; color: white; padding: 12px; border-radius: 8px; width: 100%; margin: 15px 0; outline: none; transition: 0.3s; }
+        .login-card input:focus { border-color: #ff00ff; }
+        .login-card button { background: #ff00ff; color: black; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; border: none; transition: 0.3s; margin-top: 10px; }
+        .login-card button:hover { background: #e600e6; }
+        .login-error { color: #ff6b6b; font-size: 12px; margin-top: 10px; text-align: center; }
         
+        .sync-indicator { display: flex; align-items: center; gap: 6px; font-size: 10px; color: #71717a; }
         .sync-dot { width: 6px; height: 6px; border-radius: 50%; }
         .sync-dot.loading { background: #fbbf24; animation: pulse 1s infinite; }
         .sync-dot.success { background: #10b981; }
         .sync-dot.error { background: #ef4444; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .chart-wrapper { position: relative; overflow-x: auto; }
     </style>
 </head>
 <body class="p-4 lg:p-8">
 
     <div id="loginScreen" class="login-container">
         <div class="login-card">
-            <div class="login-logo-box">
-                <img src="https://s3.us-east-2.amazonaws.com/bucket-vform-production/production/Institucion-41/Archivos/Logos/logo-1/Lotus_logo-1.png?1570651579" alt="Lotus" class="h-10 mx-auto">
+            <div class="text-center mb-8">
+                <div class="bg-white inline-block px-6 py-4 rounded-xl mb-4 shadow-lg">
+                    <img src="https://s3.us-east-2.amazonaws.com/bucket-vform-production/production/Institucion-41/Archivos/Logos/logo-1/Lotus_logo-1.png?1570651579" alt="Lotus" class="h-10 mx-auto">
+                </div>
+                <h2 class="text-2xl font-black tracking-[0.3em] text-zinc-200">ANALYTICS</h2>
+                <p class="text-zinc-500 text-sm mt-2">Acceso Restringido</p>
             </div>
-            <h2 class="text-2xl font-black tracking-[0.4em] text-white">ANALYTICS</h2>
-            <p class="text-zinc-500 text-xs mt-4 uppercase tracking-widest font-bold">Acceso Restringido</p>
-            
-            <input type="password" id="passwordInput" placeholder="Contraseña" onkeypress="if(event.key === 'Enter') checkPassword()">
-            <button onclick="checkPassword()">Entrar</button>
-            <div id="loginError" class="text-red-500 text-xs mt-4 font-bold"></div>
+            <input type="password" id="passwordInput" placeholder="Ingresa la contraseña..." onkeypress="if(event.key === 'Enter') checkPassword()">
+            <button onclick="checkPassword()">Acceder</button>
+            <div id="loginError" class="login-error"></div>
         </div>
     </div>
 
     <div id="dashboardScreen" class="hidden">
         <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
             <div class="flex items-center">
-                <div class="logo-bg"><img src="https://s3.us-east-2.amazonaws.com/bucket-vform-production/production/Institucion-41/Archivos/Logos/logo-1/Lotus_logo-1.png?1570651579" alt="Lotus" class="h-7"></div>
-                <div class="analytics-tag"><h1 class="text-sm font-black tracking-[0.4em] text-zinc-400">ANALYTICS</h1></div>
+                <div class="logo-bg">
+                    <img src="https://s3.us-east-2.amazonaws.com/bucket-vform-production/production/Institucion-41/Archivos/Logos/logo-1/Lotus_logo-1.png?1570651579" alt="Lotus" class="h-7">
+                </div>
+                <div class="analytics-tag">
+                    <h1 class="text-sm font-black tracking-[0.4em] text-zinc-400">ANALYTICS</h1>
+                </div>
             </div>
-            <div class="flex items-center gap-4 text-[10px] text-zinc-500 font-bold">
-                <div id="syncDot" class="sync-dot loading"></div>
-                <span id="syncText">CONECTANDO...</span>
-                <button onclick="logout()" class="ml-4 border border-zinc-800 px-4 py-2 rounded-full hover:border-fuchsia-500 transition-all text-zinc-400">SALIR</button>
+            
+            <div class="flex items-center gap-4">
+                <div class="sync-indicator">
+                    <div id="syncDot" class="sync-dot loading"></div>
+                    <span id="syncText">Sincronizando...</span>
+                </div>
+                <button onclick="logout()" class="border border-zinc-800 px-4 py-2 rounded-full hover:border-fuchsia-500 transition-all text-[10px] text-zinc-400 font-mono uppercase tracking-widest">Salir</button>
             </div>
         </header>
 
@@ -73,7 +84,7 @@
             <div class="lg:col-span-4 space-y-6">
                 <div class="card p-5 border-l-4 border-fuchsia-600">
                     <h3 class="text-[10px] font-black uppercase tracking-widest text-fuchsia-500 mb-3">Noticias</h3>
-                    <div id="newsTextB3" class="news-content text-sm font-light text-zinc-300 italic leading-relaxed">Cargando...</div>
+                    <div id="newsTextB3" class="news-content text-sm font-light text-zinc-300 leading-relaxed italic">Cargando...</div>
                 </div>
                 <div class="card p-5 border-l-4 border-zinc-600">
                     <h3 class="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-3">Lanzamientos Musicales</h3>
@@ -81,7 +92,7 @@
                 </div>
                 <div class="card p-5">
                     <p class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-6">Anuncios últimos 14 días</p>
-                    <div id="recentList" class="space-y-4 max-h-[800px] overflow-y-auto pr-2"></div>
+                    <div id="recentList" class="space-y-4 max-h-[1000px] overflow-y-auto pr-2"></div>
                 </div>
             </div>
 
@@ -104,25 +115,25 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="card p-6 text-center">
+                    <div class="card p-6 border-b-2 border-zinc-800 text-center">
                         <p class="text-[10px] text-zinc-500 uppercase font-black">Eventos Filtrados</p>
-                        <h2 id="kpiTotal" class="text-5xl font-black mt-2">0</h2>
+                        <h2 id="kpiTotal" class="text-5xl font-black mt-2 tracking-tighter">0</h2>
                     </div>
                     <div class="card p-6 border-b-2 border-fuchsia-900 text-center">
-                        <p class="text-[10px] text-zinc-500 uppercase font-black">Sold Outs</p>
-                        <h2 id="kpiSoldOut" class="text-5xl font-black mt-2 text-fuchsia-400">0</h2>
+                        <p id="kpiSoldOutLabel" class="text-[10px] text-zinc-500 uppercase font-black">Sold Outs</p>
+                        <h2 id="kpiSoldOut" class="text-5xl font-black mt-2 tracking-tighter text-fuchsia-400">0</h2>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 gap-8">
                     <div class="card p-8">
                         <h3 class="text-[10px] font-black uppercase mb-8 text-zinc-500 tracking-[0.3em] text-center">Anuncios por Recinto</h3>
-                        <div class="h-[500px] w-full"><canvas id="chartStacked"></canvas></div>
+                        <div class="chart-wrapper h-[600px] w-full"><canvas id="chartStacked"></canvas></div>
                     </div>
                     <div class="card p-8">
                         <div class="flex justify-between items-center mb-8">
-                            <h3 id="chartLineTitle" class="text-[10px] font-black uppercase text-zinc-500 tracking-[0.3em]">Volumen Mensual</h3>
-                            <select id="filterChartAnio" onchange="applyFilters()" class="bg-zinc-900 border border-zinc-800 text-white text-[10px] p-2 rounded w-32">
+                            <h3 id="chartLineTitle" class="text-[10px] font-black uppercase text-zinc-500 tracking-[0.3em]">Volumen Mensual de Anuncios</h3>
+                            <select id="filterChartAnio" onchange="applyFilters()" class="bg-zinc-900 border border-zinc-800 text-white text-[10px] p-2 rounded outline-none focus:border-fuchsia-500" style="width: 120px;">
                                 <option value="All">Todos los años</option>
                                 <option value="2026">2026</option><option value="2025">2025</option><option value="2024">2024</option>
                             </select>
@@ -134,13 +145,13 @@
                 <div class="card p-4">
                     <div class="flex justify-between items-center mb-4 px-2">
                         <h3 class="text-[10px] font-black uppercase text-zinc-600">Base de Datos Maestra</h3>
-                        <input type="text" id="search" onkeyup="applyFilters()" placeholder="Buscar artista..." class="bg-zinc-900 border border-zinc-800 rounded px-3 py-1 text-[10px] text-white">
+                        <input type="text" id="search" onkeyup="applyFilters()" placeholder="Buscar artista..." class="bg-zinc-900 border border-zinc-800 rounded-md px-3 py-1 text-[10px] text-white outline-none focus:border-fuchsia-500">
                     </div>
                     <div class="table-scroll max-h-[500px]">
                         <table class="w-full text-left text-xs">
                             <thead>
                                 <tr class="text-zinc-600 border-b border-zinc-800 uppercase text-[9px] font-black">
-                                    <th class="p-4">Artista</th><th class="p-4">Anuncio</th><th class="p-4">Show</th><th class="p-4">Recinto</th><th class="p-4">Productora</th><th class="p-4">Ventas</th><th class="p-4">Status</th><th class="p-4">Dcto / Auspicios</th><th class="p-4">Link</th>
+                                    <th class="p-4">Artista</th><th class="p-4">Anuncio</th><th class="p-4">Show</th><th class="p-4">Recinto</th><th class="p-4">Productora</th><th class="p-4">Ventas (PV/VG)</th><th class="p-4">Status</th><th class="p-4">Dcto / Auspicios</th><th class="p-4">Link</th>
                                 </tr>
                             </thead>
                             <tbody id="tableBody"></tbody>
@@ -154,8 +165,10 @@
     <script>
         const CORRECT_PASSWORD = 'flordeloto2026';
         const SHEET_ID = '1FfZenRVepS2mG-jvpG-WOyWSvlYtwLaUjD_tHW94r00';
+        
         let rawData = [];
         let chart1, chart2;
+        let syncTimer;
 
         function checkPassword() {
             const input = document.getElementById('passwordInput').value;
@@ -174,7 +187,7 @@
             location.reload(); 
         }
 
-        window.addEventListener('load', () => {
+        window.addEventListener('load', function() {
             if (localStorage.getItem('lotusAuth') === 'true') {
                 document.getElementById('loginScreen').classList.add('hidden');
                 document.getElementById('dashboardScreen').classList.remove('hidden');
@@ -182,7 +195,14 @@
             }
         });
 
-        // PARSER DE FECHAS (Reparado para filtros)
+        function setSyncStatus(status) {
+            const dot = document.getElementById('syncDot');
+            const text = document.getElementById('syncText');
+            dot.className = 'sync-dot ' + (status === 'loading' ? 'loading' : status === 'success' ? 'success' : 'error');
+            text.innerText = status === 'loading' ? 'Sincronizando...' : status === 'success' ? 'Sincronizado' : 'Error';
+        }
+
+        // Lógica Fuerte de Parseo de Fechas
         function parseDate(val) {
             if (!val) return null;
             if (!isNaN(val) && parseFloat(val) > 30000) {
@@ -191,69 +211,79 @@
             const s = String(val).trim();
             const parts = s.split(/[-\/]/);
             if (parts.length === 3) {
-                // Soporte para DD-MM-YYYY
                 const d = parseInt(parts[0]);
                 const m = parseInt(parts[1]) - 1;
                 const y = parts[2].length === 2 ? 2000 + parseInt(parts[2]) : parseInt(parts[2]);
                 return new Date(y, m, d);
             }
-            return new Date(val);
+            const d = new Date(val);
+            return isNaN(d.getTime()) ? null : d;
         }
 
         function fDate(val) {
             const d = parseDate(val);
-            return (d && !isNaN(d.getTime())) ? d.toLocaleDateString('es-CL') : (val || '-');
+            if (!d) return val || '-';
+            return d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
         async function loadFromGoogleSheet() {
-            const dot = document.getElementById('syncDot');
-            const txt = document.getElementById('syncText');
-            dot.className = 'sync-dot loading';
-            txt.innerText = 'SINCRONIZANDO...';
-
+            setSyncStatus('loading');
             try {
-                // 1. CARGA ANUNCIOS (Hoja 1)
-                const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=0&t=${Date.now()}`);
-                const csv = await res.text();
+                // 1. CARGA ANUNCIOS (Hoja 1 - GID 0)
+                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=0&t=${new Date().getTime()}`;
+                const response = await fetch(url);
+                const csv = await response.text();
                 const lines = csv.split(/\r?\n/).filter(l => l.trim() !== "");
-                const sep = lines[0].includes(';') ? ';' : ',';
-                const headers = lines[0].split(sep).map(h => h.trim().replace(/"/g, ''));
+                const separator = lines[0].includes(';') ? ';' : ',';
+                const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
 
                 rawData = [];
                 for (let i = 1; i < lines.length; i++) {
-                    const vals = lines[i].split(sep).map(v => v.trim().replace(/"/g, ''));
+                    const values = lines[i].split(separator).map(v => v.trim().replace(/"/g, ''));
                     const row = {};
-                    headers.forEach((h, idx) => row[h] = vals[idx] || '');
-                    const prods = String(row['Productora'] || 'TBA').split('+').map(s => s.trim());
-                    prods.forEach(p => rawData.push({ ...row, _productoraUnica: p }));
+                    headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+                    const pField = row['Productora'] || 'TBA';
+                    pField.split('+').forEach(p => {
+                        rawData.push({ ...row, _productoraUnica: p.trim() });
+                    });
                 }
 
-                // 2. CARGA NOTICIAS (Búsqueda forzada Hoja "Noticias" GID 1114214532)
-                const nRes = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Noticias&gid=1114214532&t=${Date.now()}`);
-                const nCsv = await nRes.text();
-                const nLines = nCsv.split(/\r?\n/).filter(l => l.trim() !== "");
-                
-                // Leemos fila 3 (índice 2)
-                if (nLines.length >= 3) {
-                    const nSep = nLines[0].includes(';') ? ';' : ',';
-                    const nVals = nLines[2].split(nSep).map(v => v.trim().replace(/"/g, ''));
-                    document.getElementById('newsTextB3').innerText = nVals[1] || "Sin noticias nuevas";
-                    document.getElementById('newsTextC3').innerText = nVals[2] || "Sin lanzamientos hoy";
+                // 2. CARGA NOTICIAS (Búsqueda por Nombre de Hoja "Noticias" en vez de GID para evitar cruces)
+                const newsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Noticias&t=${new Date().getTime()}`;
+                const nRes = await fetch(newsUrl);
+                if (nRes.ok) {
+                    const nCsv = await nRes.text();
+                    if (!nCsv.includes('<html')) { // Asegura que no devuelve error de Google
+                        const nLines = nCsv.split(/\r?\n/).filter(l => l.trim() !== "");
+                        if (nLines.length > 1) {
+                            const nSep = nLines[0].includes(';') ? ';' : ',';
+                            // Leemos la última fila (para asegurar que agarre el dato si tienes encabezados)
+                            const nVals = nLines[nLines.length - 1].split(nSep).map(v => v.trim().replace(/"/g, ''));
+                            
+                            // Si en Noticias las columnas son B (Noticia) y C (Lanzamiento):
+                            // Ajustamos por si la hoja solo tiene 2 columnas en total (A y B)
+                            const noticia = nVals.length > 2 ? nVals[1] : nVals[0];
+                            const lanzamiento = nVals.length > 2 ? nVals[2] : nVals[1];
+
+                            document.getElementById('newsTextB3').innerText = noticia || "Sin noticias";
+                            document.getElementById('newsTextC3').innerText = lanzamiento || "Sin lanzamientos";
+                        }
+                    }
                 }
 
                 initFilters();
                 applyFilters();
-                dot.className = 'sync-dot success';
-                txt.innerText = 'SINCRONIZADO';
-            } catch (e) {
-                dot.className = 'sync-dot error';
-                txt.innerText = 'ERROR';
+                setSyncStatus('success');
+            } catch (error) {
+                console.error(error);
+                setSyncStatus('error');
             }
         }
 
         function startSheetSync() {
             loadFromGoogleSheet();
-            setInterval(loadFromGoogleSheet, 30000);
+            if (syncTimer) clearInterval(syncTimer);
+            syncTimer = setInterval(loadFromGoogleSheet, 30000);
         }
 
         function initFilters() {
@@ -261,8 +291,10 @@
             const rSel = document.getElementById('filterRecinto');
             const prods = [...new Set(rawData.map(r => r._productoraUnica))].sort();
             const recs = [...new Set(rawData.map(r => r['Recinto']).filter(Boolean))].sort();
-            pSel.innerHTML = '<option value="All">Todas las Productoras</option>' + prods.map(p => `<option value="${p}">${p}</option>`).join('');
-            rSel.innerHTML = '<option value="All">Todos los Recintos</option>' + recs.map(r => `<option value="${r}">${r}</option>`).join('');
+            pSel.innerHTML = '<option value="All">Todas las Productoras</option>';
+            rSel.innerHTML = '<option value="All">Todos los Recintos</option>';
+            prods.forEach(p => pSel.innerHTML += `<option value="${p}">${p}</option>`);
+            recs.forEach(r => rSel.innerHTML += `<option value="${r}">${r}</option>`);
         }
 
         function applyFilters() {
@@ -271,7 +303,7 @@
             const mF = document.getElementById('filterMes').value;
             const aF = document.getElementById('filterAnio').value;
             const sF = document.getElementById('search').value.toLowerCase();
-            const cAF = document.getElementById('filterChartAnio').value;
+            const chartAF = document.getElementById('filterChartAnio').value;
 
             const filtered = rawData.filter(r => {
                 const d = parseDate(r['Fecha Anuncio']);
@@ -283,7 +315,7 @@
                 return matchP && matchR && matchM && matchA && matchS;
             });
 
-            updateUI(filtered, cAF);
+            updateUI(filtered, chartAF);
         }
 
         function updateUI(data, chartAnoFilter) {
@@ -292,20 +324,119 @@
 
             // TABLA
             document.getElementById('tableBody').innerHTML = data.map(r => {
-                const promo = `${r['Dcto'] ? r['Dcto']+'%' : '-'} / ${r['Auspiciador'] || r['Auspicios'] || '-'}`;
+                const dcto = r['Dcto'] ? r['Dcto'] + '%' : '-';
+                const ausp = r['Auspicios'] || r['Auspiciador'] || '-';
+                const promo = `${dcto} / ${ausp}`;
+                
                 return `
                 <tr class="border-b border-zinc-900/50 hover:bg-zinc-900/50">
-                    <td class="p-4 font-bold text-white text-xs">${r['Evento/Artista'] || '-'}</td>
+                    <td class="p-4 font-bold text-white">${r['Evento/Artista'] || '-'}</td>
                     <td class="p-4 text-zinc-500">${fDate(r['Fecha Anuncio'])}</td>
                     <td class="p-4 text-fuchsia-400 font-bold">${fDate(r['Fecha Show'])}</td>
-                    <td class="p-4">${r['Recinto'] || '-'}</td>
-                    <td class="p-4">${r['Productora'] || '-'}</td>
-                    <td class="p-4 uppercase text-[10px]">PV: ${fDate(r['Fecha Preventa'])}<br>VG: ${fDate(r['Fecha Venta General'])}</td>
-                    <td class="p-4 italic font-bold text-zinc-300 text-[10px]">${r['Status Venta'] || 'DISPONIBLE'}</td>
-                    <td class="p-4 text-zinc-400 uppercase font-medium text-[10px]">${promo}</td>
+                    <td class="p-4 text-zinc-400">${r['Recinto'] || '-'}</td>
+                    <td class="p-4 text-zinc-200">${r['Productora'] || '-'}</td>
+                    <td class="p-4 uppercase">PV: ${fDate(r['Fecha Preventa'])}<br>VG: ${fDate(r['Fecha Venta General'])}</td>
+                    <td class="p-4 italic font-bold">${r['Status Venta'] || 'DISPONIBLE'}</td>
+                    <td class="p-4 text-zinc-400 uppercase font-medium">${promo}</td>
                     <td class="p-4 text-center"><a href="${r['Landing Page'] || r['Link'] || '#'}" target="_blank" class="text-fuchsia-500 text-lg">↗</a></td>
                 </tr>`;
             }).join('');
 
-            // CHART STACKED
+            // GRÁFICO RECINTOS
             const recLabels = [...new Set(data.map(r => r['Recinto']).filter(Boolean))].sort();
+            const prodList = [...new Set(data.map(r => r._productoraUnica))];
+            const colors = ['#ff00ff', '#ffffff', '#444444', '#888888', '#f0abfc', '#701a75', '#a1a1aa'];
+            
+            if(chart1) chart1.destroy();
+            chart1 = new Chart(document.getElementById('chartStacked'), {
+                type: 'bar',
+                data: {
+                    labels: recLabels,
+                    datasets: prodList.map((p, i) => ({
+                        label: p,
+                        data: recLabels.map(rec => data.filter(r => r['Recinto'] === rec && r._productoraUnica === p).length),
+                        backgroundColor: colors[i % colors.length]
+                    }))
+                },
+                options: { 
+                    indexAxis: 'y', 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        x: { stacked: true }, 
+                        y: { stacked: true, ticks: { font: { size: 10 } } } 
+                    }
+                }
+            });
+
+            // GRÁFICO VOLUMEN MENSUAL
+            const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+            const mesData = new Array(12).fill(0);
+            
+            // Aquí el filtro de año actúa sobre los datos del gráfico
+            const chartDataFiltered = data.filter(r => {
+                const d = parseDate(r['Fecha Anuncio']);
+                return chartAnoFilter === 'All' || (d && d.getFullYear().toString() === chartAnoFilter);
+            });
+
+            const seenForMonth = new Set();
+            chartDataFiltered.forEach(r => {
+                const id = (r['Evento/Artista'] || "") + (r['Fecha Show'] || "");
+                if (!seenForMonth.has(id)) {
+                    seenForMonth.add(id);
+                    let d = parseDate(r['Fecha Anuncio']);
+                    if(d && !isNaN(d.getTime())) {
+                        const month = d.getMonth();
+                        if(month >= 0 && month < 12) mesData[month]++;
+                    }
+                }
+            });
+
+            document.getElementById('chartLineTitle').innerText = chartAnoFilter === 'All' ? 'Volumen Mensual (Todos los años)' : `Volumen Mensual ${chartAnoFilter}`;
+
+            if(chart2) chart2.destroy();
+            const canvas2 = document.getElementById('chartLine');
+            if(canvas2) {
+                chart2 = new Chart(canvas2, {
+                    type: 'line',
+                    data: { 
+                        labels: meses, 
+                        datasets: [{ 
+                            data: mesData, borderColor: '#ff00ff', tension: 0.4, fill: true, 
+                            backgroundColor: 'rgba(255, 0, 255, 0.1)', borderWidth: 3,
+                            pointBackgroundColor: '#ff00ff', pointRadius: 5
+                        }] 
+                    },
+                    options: { 
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { 
+                            y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                            x: { ticks: { font: { size: 11 } } }
+                        }
+                    }
+                });
+            }
+
+            // LISTA LATERAL
+            const seen = new Set();
+            const unique = data.filter(r => {
+                const id = (r['Evento/Artista'] || "") + (r['Fecha Show'] || "");
+                if(seen.has(id)) return false; seen.add(id); return true;
+            });
+            document.getElementById('recentList').innerHTML = unique.slice(0, 8).map(r => `
+                <div class="border-l-2 border-fuchsia-600 pl-4 py-4 bg-zinc-900/40 rounded-r-lg mb-3">
+                    <p class="text-[9px] font-black text-fuchsia-500 uppercase">ANUNCIO: ${fDate(r['Fecha Anuncio'])} | ${r['Productora']}</p>
+                    <p class="text-sm font-black text-white leading-tight">${r['Evento/Artista']}</p>
+                    <p class="text-[10px] text-zinc-500 uppercase">${r['Recinto'] || '-'}</p>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="text-[8px] font-black uppercase px-2 py-1.5 rounded bg-zinc-800 text-fuchsia-400 flex-grow text-center">${r['Status Venta'] || 'DISPONIBLE'}</span>
+                        <a href="${r['Landing Page'] || r['Link'] || '#'}" target="_blank" class="text-[8px] font-black uppercase px-3 py-1.5 rounded bg-fuchsia-600 text-black">Tickets</a>
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
